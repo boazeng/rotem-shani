@@ -1233,15 +1233,14 @@
       const need = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
       if (need.some(n => !tray(n))) return null;
       const key = (c, r) => c + ',' + r;
-      // cols(east) x rows(north): rows 0-2 = the parked cars, row 3 = the aisle (exit lane)
-      const numByCell = { '0,0': 18, '0,1': 19, '0,2': 20, '1,0': 12, '1,1': 13, '1,2': 14, '2,0': 15, '2,1': 16, '2,2': 17 };
+      // cols(east) x rows(north): rows 0-2 = the parked cars; row 3 = aisle. car 21 sits at A1(1,3).
+      // A2(2,3) is NOT drivable (outside the rails) -> excluded. A0(0,3) near E1 is the single blank.
+      const numByCell = { '0,0': 18, '0,1': 19, '0,2': 20, '1,0': 12, '1,1': 13, '1,2': 14, '2,0': 15, '2,1': 16, '2,2': 17, '1,3': 21 };
       const cellWorld = {};
-      Object.keys(numByCell).forEach(k => { const g = tray(numByCell[k]); cellWorld[k] = { x: g.position.x, z: g.position.z }; });
-      // aisle row (r=3): same column x, north = 7.9
+      ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2'].forEach(k => { const g = tray(numByCell[k]); cellWorld[k] = { x: g.position.x, z: g.position.z }; });
       const aisleZ = pz(7.9);
-      [0, 1, 2].forEach(c => { cellWorld[key(c, 3)] = { x: cellWorld[key(c, 2)].x, z: aisleZ }; });
-      // puzzle cells: the 9 parked cells + aisle A0(0,3) & A2(2,3). A1(1,3) is blocked by car 21.
-      const cells = ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2', '0,3', '2,3'];
+      [0, 1].forEach(c => { cellWorld[key(c, 3)] = { x: cellWorld[key(c, 2)].x, z: aisleZ }; });   // A0, A1
+      const cells = ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2', '0,3', '1,3'];  // A2 excluded
       const cellSet = new Set(cells);
       const neighbors = kk => {
         const [c, r] = kk.split(',').map(Number);
