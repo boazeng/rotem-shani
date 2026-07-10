@@ -110,6 +110,9 @@
     <div class="divider"></div>
     <label>מספר רכב להוצאה <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
     <button id="runExtract">▶ הפעל חילוץ</button>
+    <div class="divider"></div>
+    <label>משבצת לקליטה <input type="number" id="cfgIntake" value="8" min="2" max="22"></label>
+    <button id="runIntakeBtn">▶ קלוט רכב</button>
   </div>
 
   <div id="help">⚠️ עריכה נעולה — לחץ <b>🔒 עדכן</b> כדי לאפשר שינויים<br>מצלמה: גרירה בשטח ריק = סיבוב · גלגלת = זום · קליק־ימני = הזזה<br>אובייקט: לחיצה = בחירה · גרירה = הזזה · Q/E = סיבוב · R = 90° · Delete = מחיקה<br>קיר: ➕ קיר → לחיצה על נקודת התחלה ואז נקודת סיום · Esc = יציאה</div>
@@ -1084,9 +1087,22 @@
     }
 
     // ============ SCENARIO ENGINE (task queue of tray moves / spins / turns) ============
-    let anims = [], taskQueue = [], paused = false;
+    let anims = [], taskQueue = [], paused = false, pending = [];
     let convoyDir = null, sinceLaunch = 0, running = false;
-    const busy = () => anims.length > 0 || taskQueue.length > 0;
+    const busy = () => anims.length > 0 || taskQueue.length > 0 || pending.length > 0;
+    // occupancy / intake helpers
+    const trayCar = tg => tg && tg.children.find(c => c.userData && c.userData.isCar);
+    const isEmptySpot = tg => !!(tg && tg.userData.empty);
+    function delay(sec, fn) { pending.push({ t: sec, fn }); }        // scenario-clock delay (honours pause/reset)
+    // snap every tray back to its saved home (clean grid); hidden cars stay hidden (occupancy preserved)
+    function settleClean() {
+      initialState.forEach(s => {
+        if (!s.g || !s.g.userData || !s.g.userData.isTray) return;
+        s.g.position.set(s.x, s.y, s.z); s.g.rotation.y = s.ry;
+      });
+      if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;
+      if (boxHelper) boxHelper.update();
+    }
     // snapshot of every movable's transform -> "reset simulation" restores it.
     // re-captured on Save so reset returns to the last-saved arrangement (not page-load).
     let initialState = [];
@@ -1095,12 +1111,14 @@
     }
     captureInitial();
     function resetSim() {
-      anims = []; taskQueue = []; convoyDir = null; sinceLaunch = 0; running = false;
+      anims = []; taskQueue = []; pending = []; convoyDir = null; sinceLaunch = 0; running = false;
       if (paused) setPaused(false);
       initialState.forEach(s => {
         if (!s.g.parent) return;               // was deleted -> skip
         s.g.position.x = s.x; s.g.position.y = s.y; s.g.position.z = s.z; s.g.rotation.y = s.ry;
       });
+      // restore full occupancy: every tray gets its car back (undo exit "disappear")
+      trayGroups.forEach(tg => { tg.userData.empty = false; const c = trayCar(tg); if (c) c.visible = document.getElementById('tCars').checked; });
       if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;   // lift platform back down
       if (boxHelper) boxHelper.update();
       updateSelInfo();
@@ -1117,12 +1135,12 @@
     function runTasks(tasks) {
       if (busy()) { flash('הדמיה כבר רצה'); return false; }
       if (paused) setPaused(false);
-      anims = []; taskQueue = tasks.slice(); convoyDir = null; sinceLaunch = CFG.gap; running = true;
+      anims = []; taskQueue = tasks.slice(); pending = []; convoyDir = null; sinceLaunch = CFG.gap; running = true;
       return true;
     }
     const sameDir = (a, b) => !!a && !!b && (a.x * b.x + a.z * b.z) > 0.9;
     function launch(task) {
-      anims.push({ tray: task.tray, steps: task.steps, i: 0, t: 0, end: task.end,
+      anims.push({ tray: task.tray, steps: task.steps, i: 0, t: 0, end: task.end, onDone: task.onDone,
         from: { x: task.tray.position.x, z: task.tray.position.z, ry: task.tray.rotation.y, y: task.tray.position.y } });
       convoyDir = task.dir || null;
       sinceLaunch = 0;
@@ -1156,7 +1174,8 @@
       return false;
     }
     function stepScenario(dt) {
-      for (let i = anims.length - 1; i >= 0; i--) if (advanceOne(anims[i], dt)) anims.splice(i, 1);
+      for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; if (advanceOne(a, dt)) { anims.splice(i, 1); if (a.onDone) a.onDone(); } }
+      for (let i = pending.length - 1; i >= 0; i--) { pending[i].t -= dt; if (pending[i].t <= 0) { const fn = pending[i].fn; pending.splice(i, 1); fn(); } }
       sinceLaunch += dt;
       while (taskQueue.length) {
         const next = taskQueue[0];
@@ -1166,7 +1185,7 @@
         }
         break;   // different direction (or a lone task) -> wait for the running ones to finish
       }
-      if (running && anims.length === 0 && taskQueue.length === 0) { running = false; flash('הדמיה הסתיימה ✓'); }
+      if (running && anims.length === 0 && taskQueue.length === 0 && pending.length === 0) { running = false; flash('הדמיה הסתיימה ✓'); }
     }
 
     // ---- simple single-car demo (aisle / spin-return) ----
@@ -1319,6 +1338,16 @@
     const moveTask = (g, wx, wz, ry) => ({ tray: g, end: { x: wx, z: wz, ry: (ry != null ? ry : g.rotation.y) },
       steps: [{ type: 'move', to: { x: wx, z: wz }, dur: dur(Math.hypot(g.position.x - wx, g.position.z - wz)) }] });
 
+    // when an extracted car reaches the lift: after 3s it leaves (car hidden, spot freed), grid settles clean
+    function scheduleExit(tg, num) {
+      return () => delay(3, () => {
+        const c = trayCar(tg); if (c) c.visible = false;
+        tg.userData.empty = true;
+        settleClean();
+        flash('רכב ' + num + ' יצא מהמתקן ✓');
+      });
+    }
+
     function extractFromBlock1(T) {
       if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
@@ -1326,7 +1355,7 @@
       if (!M) { flash('בלוק 1 לא זוהה'); return; }
       if (!M.carByNum[T]) { flash('רכב ' + T + ' לא בבלוק 1'); return; }
       const tasks = [];
-      if (T === 5) { runTasks([fullExit(M.carByNum[5])]); flash('חילוץ רכב 5'); return; }
+      if (T === 5) { const ex = fullExit(M.carByNum[5]); ex.onDone = scheduleExit(M.carByNum[5], 5); runTasks([ex]); flash('חילוץ רכב 5'); return; }
       tasks.push(outToE1(M.carByNum[5]));                 // free the gateway
       const board = {};
       M.cells.forEach(k => board[k] = M.numByCell[k]);
@@ -1339,7 +1368,7 @@
         const t = moveTask(M.carByNum[mv.car], b.x, b.z); t.dir = { x: dx / dm, z: dz / dm };
         tasks.push(t);
       });
-      tasks.push(fullExit(M.carByNum[T]));                // target -> exit through the lift
+      { const ex = fullExit(M.carByNum[T]); ex.onDone = scheduleExit(M.carByNum[T], T); tasks.push(ex); }  // target -> exit
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' — ' + sol.length + ' הזזות');
     }
@@ -1390,7 +1419,7 @@
           steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] });
       });
       // 3) target at A0, aisle lane (A1) empty, car 21 parked in a grid cell -> T drives A0 -> E1 -> turntable -> lift
-      tasks.push(fullExit(M.tray(T), true));
+      { const ex = fullExit(M.tray(T), true); ex.onDone = scheduleExit(M.tray(T), T); tasks.push(ex); }
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' מבלוק 2 — ' + sol.length + ' הזזות');
     }
@@ -1401,6 +1430,93 @@
       if (BLOCK1.has(num)) extractFromBlock1(num);
       else if (BLOCK2.has(num)) extractFromBlock2(num);
       else playCar(num);
+    }
+
+    // ============ INTAKE (admit a car into a chosen empty spot) — the reverse of extraction ============
+    // the car appears at ground level on the lift, descends, drives to the aisle entry, then a puzzle slides it
+    // into the chosen empty cell (opening a path). At the end the grid settles clean with the spot now occupied.
+    function intakeDrive2(g, a0) {   // block 2: lift -> turntable -> E1 -> A0
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+      const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
+      const e1x = e1Group ? e1Group.position.x : ttx, e1z = e1Group ? e1Group.position.z : ttz;
+      return { tray: g, end: { x: a0.x, z: a0.z, ry: g.rotation.y, y: 0 }, steps: [
+        { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },
+        { type: 'move', to: { x: e1x, z: e1z }, dur: dur(Math.hypot(ttx - e1x, ttz - e1z)) },
+        { type: 'move', to: { x: a0.x, z: a0.z }, dur: dur(Math.hypot(e1x - a0.x, e1z - a0.z)) } ] };
+    }
+    function intakeDrive1(g, gw) {   // block 1: lift -> turntable -> gateway
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+      const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
+      return { tray: g, end: { x: gw.x, z: gw.z, ry: g.rotation.y, y: 0 }, steps: [
+        { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },
+        { type: 'move', to: { x: gw.x, z: gw.z }, dur: dur(Math.hypot(ttx - gw.x, ttz - gw.z)) } ] };
+    }
+    function pushMoves(tasks, trayFn, cellWorld, sol) {
+      sol.forEach(mv => {
+        const g = trayFn(mv.car), a = cellWorld[mv.from], b = cellWorld[mv.to];
+        const dx = b.x - a.x, dz = b.z - a.z, dm = Math.hypot(dx, dz) || 1;
+        tasks.push({ tray: g, dir: { x: dx / dm, z: dz / dm }, end: { x: b.x, z: b.z, ry: g.rotation.y },
+          steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] });
+      });
+    }
+    function placeAtLift(tg) { const ry = tg.rotation.y; const c = trayCar(tg); if (c) c.visible = true;
+      tg.position.set(liftGroup.position.x, H, liftGroup.position.z); tg.rotation.y = ry; tg.userData.empty = false; }
+
+    function intakeToBlock2(N) {
+      const M = block2Model(); if (!M) { flash('בלוק 2 לא זוהה'); return; }
+      const tgN = M.tray(N); if (!tgN) { flash('אין משטח ' + N); return; }
+      if (!isEmptySpot(tgN)) { flash('משבצת ' + N + ' תפוסה'); return; }
+      const cellN = Object.keys(M.numByCell).find(k => M.numByCell[k] === N);
+      if (!cellN || cellN === M.A1) { flash('לא ניתן לקלוט למשבצת ' + N); return; }
+      const board = {};
+      M.cells.forEach(k => { const num = M.numByCell[k]; board[k] = (num && !isEmptySpot(M.tray(num))) ? num : 0; });
+      board[M.A1] = 21; board[cellN] = 0; board[M.A0] = N;   // helper at A1, target cell empty, new car enters at A0
+      const sol = solvePuzzle(board, M.cells, M.neighbors, cellN, N);
+      if (!sol) { flash('לא נמצא נתיב קליטה'); return; }
+      placeAtLift(tgN);
+      const tasks = [ moveTask(M.tray(21), M.cellWorld[M.A1].x, M.cellWorld[M.A1].z),
+                      intakeDrive2(tgN, M.cellWorld[M.A0]) ];
+      pushMoves(tasks, M.tray, M.cellWorld, sol);
+      tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + N + ' נקלט ✓'); };
+      runTasks(tasks);
+      flash('קליטת רכב ' + N + ' — ' + sol.length + ' הזזות');
+    }
+    function intakeToBlock1(N) {
+      const M = blockModel(); if (!M) { flash('בלוק 1 לא זוהה'); return; }
+      const tgN = M.carByNum[N]; if (!tgN) { flash('רכב ' + N + ' לא בבלוק 1'); return; }
+      if (!isEmptySpot(tgN)) { flash('משבצת ' + N + ' תפוסה'); return; }
+      const gw = M.cellWorld[M.gateway];
+      if (N === 5) {   // the gateway itself: just drive in from the lift
+        placeAtLift(tgN);
+        const d = intakeDrive1(tgN, gw); d.onDone = () => { settleClean(); flash('רכב 5 נקלט ✓'); };
+        runTasks([d]); flash('קליטת רכב 5'); return;
+      }
+      const cellN = M.cellByNum[N];
+      const board = {};
+      M.cells.forEach(k => { const num = M.numByCell[k]; board[k] = (num && !isEmptySpot(M.carByNum[num])) ? num : 0; });
+      board[M.gateway] = N; board[cellN] = 0;   // car 5 leaves to E1; new car enters at the gateway
+      const sol = solvePuzzle(board, M.cells, M.neighbors, cellN, N);
+      if (!sol) { flash('לא נמצא נתיב קליטה'); return; }
+      placeAtLift(tgN);
+      const tasks = [ outToE1(M.carByNum[5]), intakeDrive1(tgN, gw) ];
+      pushMoves(tasks, n => M.carByNum[n], M.cellWorld, sol);
+      tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + N + ' נקלט ✓'); };
+      runTasks(tasks);
+      flash('קליטת רכב ' + N + ' — ' + sol.length + ' הזזות');
+    }
+    function runIntake(N) {
+      if (isNaN(N)) { flash('מספר משבצת לא תקין'); return; }
+      if (busy()) { flash('הדמיה כבר רצה'); return; }
+      if (!turntableGroup || !liftGroup) { flash('אין מעלית/צלחת'); return; }
+      if (BLOCK2.has(N)) intakeToBlock2(N);
+      else if (BLOCK1.has(N)) intakeToBlock1(N);
+      else flash('קליטה נתמכת לבלוק 1/2 בלבד');
     }
     function playScenario() {
       let num;
@@ -1441,6 +1557,8 @@
     readCfg();
     document.getElementById('runExtract').onclick = () =>
       runScenario(parseInt(document.getElementById('cfgCar').value, 10));
+    document.getElementById('runIntakeBtn').onclick = () =>
+      runIntake(parseInt(document.getElementById('cfgIntake').value, 10));
 
     // ---------- loop ----------
     addEventListener('resize', () => {
