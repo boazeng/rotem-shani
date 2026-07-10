@@ -54,4 +54,34 @@
 פרטים מלאים ב-[ALGORITHMS.md](ALGORITHMS.md).
 
 ## מודלי רכב
-11 דגמים אמיתיים (2 מכל אחד): Barracuda, Hemi Cuda, Mercedes S65, Golf GTI, Malibu, 130, Mini JCW, Corvette C8, Mustang '65, Kona, SL63 AMG. השיבוץ מוגדר ב-`TRAY_MODEL` בקוד. הוספת מודלים — ראה [PIPELINE.md](PIPELINE.md).
+
+11 דגמים אמיתיים, כל דגם מופיע פעמיים (2×11 = 22 חניות). השיבוץ מוגדר בקוד ב-`rotem-shani.html`: המילון `TRAY_MODEL` (מספר חנייה → מפתח מודל) והמילון `MODEL_FILES` (מפתח → קובץ `.glb`).
+
+### מיפוי מדויק — איזה מודל בכל מספר חנייה
+
+| מפתח מודל | קובץ `.glb` | הדגם | חניות |
+|---|---|---|---|
+| `barracuda` | `barracuda.glb` | Plymouth Barracuda | **1, 12** |
+| `hemicuda` | `hemicuda.glb` | Hemi Cuda | **2, 13** |
+| `mercedes` | `mercedes.glb` | Mercedes S65 | **3, 14** |
+| `golf` | `golf.glb` | Golf GTI | **4, 15** |
+| `malibu` | `malibu.glb` | Chevrolet Malibu | **5, 16** |
+| `car130` | `car130.glb` | "130" | **6, 17** |
+| `mini` | `mini.glb` | Mini JCW | **7, 18** |
+| `corvette` | `corvette.glb` | Corvette C8 | **8, 19** |
+| `mustang` | `mustang.glb` | Mustang '65 | **9, 20** |
+| `kona` | `kona.glb` | Hyundai Kona | **10, 21** |
+| `sl63` | `sl63.glb` | Mercedes SL63 AMG | **11, 22** |
+
+כל הקבצים נמצאים ב-`simulation/models/cars/` ומנוהלים ב-Git LFS.
+
+**היגיון השיבוץ:** חניות 1–11 מקבלות את 11 הדגמים בזה אחר זה, וחניות 12–22 חוזרות על אותה סדרה (חנייה N וחנייה N+11 = אותו דגם).
+
+### קבצים שקיימים אך אינם משובצים
+| קובץ | סטטוס |
+|---|---|
+| `ferrari_plain.glb` | **fallback בלבד** — נטען לכל חנייה שאין לה מודל ב-`TRAY_MODEL` או שהמודל שלה נכשל בטעינה. כרגע כל 22 החניות משובצות, אז הוא לא נראה בפועל. |
+
+> הערה מהקוד: דגמי `beetle`/`bmw` הושמטו (כפילות רכב בתוך אותו קובץ), ו-`oldsmobile` הושמט (שימש לכיפת סביבה). לכן הם לא ברשימה.
+
+הוספת מודלים חדשים או שינוי שיבוץ — ראה [PIPELINE.md](PIPELINE.md); לאחר כל שינוי הרץ `.\sync.ps1` כדי שהמחשב השני יקבל אותו.
