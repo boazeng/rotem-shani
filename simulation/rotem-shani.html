@@ -94,7 +94,8 @@
       <label class="tog"><input type="checkbox" id="tGuides"> קווי עזר</label><br>
       <label class="tog"><input type="checkbox" id="tDark" checked> חושך מוחלט (כיבוי אור סביבתי)</label><br>
       <label class="tog"><input type="checkbox" id="tFluor" checked> פלורוסנטים</label><br>
-      <label class="tog"><input type="checkbox" id="tCeil"> תקרת קרקע</label><br>
+      <label class="tog"><input type="checkbox" id="tGrass"> דשא (גג)</label><br>
+      <label class="tog"><input type="checkbox" id="tCeil"> תקרת בטון</label><br>
       <label class="tog"><input type="checkbox" id="tCars" checked> רכבים</label><br>
       <label class="tog"><input type="checkbox" id="tGrid"> רשת</label>
     </div>
@@ -105,6 +106,7 @@
     <label>מהירות נסיעה <span class="u">מ׳/ש'</span><input type="number" id="cfgTravel" value="2.5" step="0.5" min="0.5"></label>
     <label>סיבוב צלחת <span class="u">°/ש'</span><input type="number" id="cfgSpin" value="120" step="10" min="10"></label>
     <label>מהירות מעלית <span class="u">מ׳/ש'</span><input type="number" id="cfgLift" value="1.0" step="0.5" min="0.1"></label>
+    <label>זמן השהיה בין תנועת משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="1" step="0.1" min="0"></label>
     <div class="divider"></div>
     <label>מספר רכב להוצאה <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
     <button id="runExtract">▶ הפעל חילוץ</button>
@@ -124,6 +126,7 @@
     <span id="selinfo">לא נבחר משטח</span>
     <span class="sep"></span>
     <button id="play" class="go" title="חילוץ רכב נבחר מבלוק 1 (חידת 15)">▶ הדמיה</button>
+    <button id="pause" class="go" title="השהה / המשך את התרחיש הרץ">⏸ השהה</button>
     <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ אתחל סימולציה</button>
     <button id="top" title="מבט על">⬇ מבט על</button>
     <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
@@ -220,10 +223,12 @@
     const shapePts = outline.map(v2);
 
     // ---- floor slab (exact polygon) ----
-    const shape = new THREE.Shape(shapePts);
+    // ShapeGeometry + rotateX(-PI/2) maps shape.y -> world -Z, so negate Z here to place the floor exactly on the
+    // same contour as the walls (which use shapePts directly). DoubleSide because negating flips the winding/normal.
+    const shape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.y)));
     const floorGeo = new THREE.ShapeGeometry(shape);
     floorGeo.rotateX(-Math.PI / 2);          // lay flat (XZ)
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.95, metalness: 0.0 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.95, metalness: 0.0, side: THREE.DoubleSide });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.y = 0;
     floor.receiveShadow = true;
@@ -251,21 +256,9 @@
     }
     scene.add(wallGrp);
 
-    // ---- ground/ceiling slab at top (toggle) ----
-    const ceilGeo = new THREE.ShapeGeometry(shape);
-    ceilGeo.rotateX(-Math.PI / 2);
-    const ceilMat = new THREE.MeshStandardMaterial({ color: 0x3a3f4a, roughness: 1.0, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-    const ceil = new THREE.Mesh(ceilGeo, ceilMat);
-    ceil.position.y = H;
-    ceil.visible = false;
-    scene.add(ceil);
-
-    // ---- surrounding earth (context plane) ----
-    const earthMat = new THREE.MeshStandardMaterial({ color: 0x1a2230, roughness: 1 });
-    const earth = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), earthMat);
-    earth.rotation.x = -Math.PI / 2; earth.position.y = -0.05;
-    earth.receiveShadow = true;
-    scene.add(earth);
+    // ---- ground floor (concrete ceiling + grass roof, with a lift opening) + surrounding earth ----
+    // built after the lift so we can punch the lift shaft through the roof. See buildGroundFloor() below.
+    let grassMesh = null, ceilMesh = null;   // grass roof + concrete ceiling — independent toggles
 
     // ---- floor grid (toggle) ----
     const grid = new THREE.GridHelper(Math.max(W, D) + 4, Math.round(Math.max(W, D) + 4), 0x2c4468, 0x1d2c44);
@@ -636,9 +629,10 @@
       liftPlatform = plat;                        // only the platform rises; posts stay fixed
       lg.add(plat);
       const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6 });
+      const POSTH = H;   // posts span the floor to the ground/roof level (not above it)
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, H, 0.14), postMat);
-        p.position.set(sx * (TRAY_L + 0.4) / 2, H / 2, sz * (TRAY_W + 0.5) / 2);
+        const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, POSTH, 0.14), postMat);
+        p.position.set(sx * (TRAY_L + 0.4) / 2, POSTH / 2, sz * (TRAY_W + 0.5) / 2);
         lg.add(p);
       });
       plat.add(makeCenterMarker(0.14));          // mark the lift center; on the platform so it rises with the car
@@ -648,6 +642,94 @@
       scene.add(lg);
       liftGroup = lg;
       movables.push(lg);
+    }
+
+    // ============ GROUND FLOOR (concrete ceiling + grass roof, with the lift shaft open) + earth ============
+    // shape space == world XZ here (shapePts = [px(e), pz(n)] = worldX/worldZ), so a hole placed at the lift's
+    // world position lands correctly after the same rotateX(-PI/2) the floor uses.
+    {
+      // small lift-shaft opening — a rectangle just around the 4 raised posts, so they surface through the roof
+      let liftHole = null;
+      if (liftGroup) {
+        const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+        const hl = (TRAY_L + 0.4) / 2 + 0.3, hw = (TRAY_W + 0.5) / 2 + 0.3;   // just a bit around the posts
+        const ux = Math.cos(lry), uz = -Math.sin(lry);
+        const vx = Math.sin(lry), vz = Math.cos(lry);
+        const cn = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([sx, sz]) =>
+          [lx + sx * hl * ux + sz * hw * vx, lz + sx * hl * uz + sz * hw * vz]);
+        // ShapeGeometry/ExtrudeGeometry + rotateX(-PI/2) map shape.y -> world -Z, so negate Z to land the hole
+        // on the lift's real world position (the bbox is ~symmetric in Z, which is why floor/grass looked fine).
+        liftHole = () => new THREE.Path(cn.map(c => new THREE.Vector2(c[0], -c[1])));
+      }
+      // concrete ceiling = a big RECTANGLE that fully covers the garage from any angle (parallax-proof),
+      // raised slightly above the wall tops so they stay hidden. OPAQUE, 40 cm, small opening around the lift posts.
+      const M = 5, rx = W / 2 + M, rz = D / 2 + M;
+      const ceilShape = new THREE.Shape([
+        new THREE.Vector2(-rx, -rz), new THREE.Vector2(rx, -rz),
+        new THREE.Vector2(rx, rz), new THREE.Vector2(-rx, rz)]);
+      if (liftHole) ceilShape.holes.push(liftHole());
+      const SLAB = 0.4;
+      const ceilGeo = new THREE.ExtrudeGeometry(ceilShape, { depth: SLAB, bevelEnabled: false });
+      ceilGeo.rotateX(-Math.PI / 2);
+      // procedural grey concrete texture; kept self-lit (emissive) so it reads as grey even in "full dark" mode
+      const cc = document.createElement('canvas'); cc.width = cc.height = 256;
+      const cg = cc.getContext('2d');
+      cg.fillStyle = '#8f9297'; cg.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 16000; i++) {
+        const v = 120 + Math.floor(Math.random() * 75);
+        cg.fillStyle = 'rgba(' + v + ',' + v + ',' + (v + 3) + ',' + (Math.random() * 0.5) + ')';
+        cg.fillRect(Math.random() * 256, Math.random() * 256, 1.7, 1.7);
+      }
+      for (let i = 0; i < 45; i++) {   // faint hairline cracks / form lines
+        cg.strokeStyle = 'rgba(66,66,70,' + (0.08 + Math.random() * 0.22) + ')';
+        cg.lineWidth = 0.7; cg.beginPath();
+        cg.moveTo(Math.random() * 256, Math.random() * 256);
+        cg.lineTo(Math.random() * 256, Math.random() * 256); cg.stroke();
+      }
+      const concreteTex = new THREE.CanvasTexture(cc);
+      concreteTex.wrapS = concreteTex.wrapT = THREE.RepeatWrapping;
+      concreteTex.repeat.set(0.4, 0.4);
+      ceilMesh = new THREE.Mesh(ceilGeo,
+        new THREE.MeshStandardMaterial({ map: concreteTex, color: 0xc2c6cc, roughness: 1.0, side: THREE.DoubleSide,
+          emissive: 0x6d7075, emissiveMap: concreteTex, emissiveIntensity: 0.55 }));
+      ceilMesh.position.y = H - SLAB + 0.2;   // raised 0.2 m: slab top at H+0.2 so it hides the wall-top edges
+      ceilMesh.visible = false;
+      scene.add(ceilMesh);
+      // grass roof — a rectangle a bit LARGER than the concrete so it fully hides it (own toggle tGrass),
+      // sits above the concrete. Shares the same lift opening.
+      const GM = M + 0.6, grx = W / 2 + GM, grz = D / 2 + GM;
+      const grassShape = new THREE.Shape([
+        new THREE.Vector2(-grx, -grz), new THREE.Vector2(grx, -grz),
+        new THREE.Vector2(grx, grz), new THREE.Vector2(-grx, grz)]);
+      if (liftHole) grassShape.holes.push(liftHole());
+      const grassGeo = new THREE.ShapeGeometry(grassShape); grassGeo.rotateX(-Math.PI / 2);
+      // procedural green grass texture; self-lit (emissive) so it reads green even in "full dark" mode
+      const gc = document.createElement('canvas'); gc.width = gc.height = 256;
+      const gx = gc.getContext('2d');
+      gx.fillStyle = '#3f7f30'; gx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 22000; i++) {              // mottled blades: vary green shade
+        const r = 40 + Math.floor(Math.random() * 55), g = 95 + Math.floor(Math.random() * 70), bl = 30 + Math.floor(Math.random() * 35);
+        gx.fillStyle = 'rgba(' + r + ',' + g + ',' + bl + ',' + (0.25 + Math.random() * 0.5) + ')';
+        gx.fillRect(Math.random() * 256, Math.random() * 256, 1.6, 2.4);   // slightly tall = blade-like
+      }
+      const grassTex = new THREE.CanvasTexture(gc);
+      grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+      grassTex.repeat.set(0.7, 0.7);
+      grassMesh = new THREE.Mesh(grassGeo,
+        new THREE.MeshStandardMaterial({ map: grassTex, color: 0x6fae4f, roughness: 1.0, side: THREE.DoubleSide,
+          emissive: 0x2f5a24, emissiveMap: grassTex, emissiveIntensity: 0.5 }));
+      grassMesh.position.y = H + 0.3;   // above the raised concrete slab
+      grassMesh.receiveShadow = true;
+      grassMesh.visible = false;
+      scene.add(grassMesh);
+
+      // surrounding earth at the BASE (not at roof height) so the pit walls stay fully visible above it
+      const earthMesh = new THREE.Mesh(new THREE.PlaneGeometry(180, 180),
+        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0 }));
+      earthMesh.rotation.x = -Math.PI / 2;
+      earthMesh.position.y = -0.05;
+      earthMesh.receiveShadow = true;
+      scene.add(earthMesh);
     }
 
     // ============ GUIDE LINES (diagnostic: lift axis × travel direction) ============
@@ -711,7 +793,8 @@
     document.getElementById('tDark').onchange = applyDark;
     // fluorescents off: hiding the group also skips its child point lights during render
     document.getElementById('tFluor').onchange = e => { fixtures.visible = e.target.checked; };
-    document.getElementById('tCeil').onchange = e => ceil.visible = e.target.checked;
+    document.getElementById('tCeil').onchange = e => { if (ceilMesh) ceilMesh.visible = e.target.checked; };
+    document.getElementById('tGrass').onchange = e => { if (grassMesh) grassMesh.visible = e.target.checked; };
     function setCars(v) {
       trayGroups.forEach(g => g.children.forEach(c => { if (c.userData.isCar) c.visible = v; }));
       document.getElementById('tCars').checked = v;
@@ -723,7 +806,7 @@
     document.getElementById('tGrid').onchange = e => grid.visible = e.target.checked;
 
     // apply the default view state (from the checkboxes above) on load
-    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tCars', 'tGrid', 'tDark', 'tFluor'].forEach(id => {
+    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tGrass', 'tCars', 'tGrid', 'tDark', 'tFluor'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.onchange) el.onchange({ target: el });
     });
@@ -859,6 +942,8 @@
       return data;
     }
     async function saveLayout() {
+      if (busy()) { flash('אי אפשר לשמור באמצע תרחיש — אתחל תחילה ↺'); return; }
+      if (trayGroups.some(g => g.position.y > 0.5)) { flash('רכב על המעלית — אתחל (↺) לפני שמירה'); return; }
       const data = currentLayout();
       try {
         const r = await fetch('/save', {
@@ -999,7 +1084,9 @@
     }
 
     // ============ SCENARIO ENGINE (task queue of tray moves / spins / turns) ============
-    let anim = null, taskQueue = [];
+    let anims = [], taskQueue = [], paused = false;
+    let convoyDir = null, sinceLaunch = 0, running = false;
+    const busy = () => anims.length > 0 || taskQueue.length > 0;
     // snapshot of every movable's transform -> "reset simulation" restores it.
     // re-captured on Save so reset returns to the last-saved arrangement (not page-load).
     let initialState = [];
@@ -1008,7 +1095,8 @@
     }
     captureInitial();
     function resetSim() {
-      anim = null; taskQueue = [];
+      anims = []; taskQueue = []; convoyDir = null; sinceLaunch = 0; running = false;
+      if (paused) setPaused(false);
       initialState.forEach(s => {
         if (!s.g.parent) return;               // was deleted -> skip
         s.g.position.x = s.x; s.g.position.y = s.y; s.g.position.z = s.z; s.g.rotation.y = s.ry;
@@ -1020,48 +1108,65 @@
     }
     const easeInOut = k => k * k * (3 - 2 * k);
     // live timing config (edited from the ⚙ settings panel)
-    const CFG = { travel: 2.5, spin: 120, lift: 1.0 };   // m/s, deg/s, m/s
+    const CFG = { travel: 2.5, spin: 120, lift: 1.0, gap: 1 };   // m/s, deg/s, m/s, and convoy stagger gap(s)
     const dur = d => Math.max(0.2, d / CFG.travel);
     const spinDur = deg => Math.max(0.2, Math.abs(deg) / CFG.spin);
 
+    // scenario engine: several trays can animate at once. Consecutive tasks that move in the SAME direction
+    // (a shifting "convoy") start staggered by CFG.gap seconds instead of each waiting for the previous to finish.
     function runTasks(tasks) {
-      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return false; }
-      taskQueue = tasks.slice();
-      startNextTask();
+      if (busy()) { flash('הדמיה כבר רצה'); return false; }
+      if (paused) setPaused(false);
+      anims = []; taskQueue = tasks.slice(); convoyDir = null; sinceLaunch = CFG.gap; running = true;
       return true;
     }
-    function startNextTask() {
-      if (taskQueue.length === 0) { anim = null; flash('הדמיה הסתיימה ✓'); return; }
-      const tk = taskQueue.shift();
-      anim = { tray: tk.tray, steps: tk.steps, i: 0, t: 0, end: tk.end,
-               from: { x: tk.tray.position.x, z: tk.tray.position.z, ry: tk.tray.rotation.y, y: tk.tray.position.y } };
+    const sameDir = (a, b) => !!a && !!b && (a.x * b.x + a.z * b.z) > 0.9;
+    function launch(task) {
+      anims.push({ tray: task.tray, steps: task.steps, i: 0, t: 0, end: task.end,
+        from: { x: task.tray.position.x, z: task.tray.position.z, ry: task.tray.rotation.y, y: task.tray.position.y } });
+      convoyDir = task.dir || null;
+      sinceLaunch = 0;
     }
-    function advanceAnim(dt) {
-      const s = anim.steps[anim.i];
-      anim.t += dt;
-      const k = Math.min(1, anim.t / s.dur), e = easeInOut(k);
-      const tr = anim.tray;
+    function advanceOne(a, dt) {
+      const s = a.steps[a.i];
+      a.t += dt;
+      const k = Math.min(1, a.t / s.dur), e = easeInOut(k);
+      const tr = a.tray;
       if (s.type === 'move') {
-        tr.position.x = anim.from.x + (s.to.x - anim.from.x) * e;
-        tr.position.z = anim.from.z + (s.to.z - anim.from.z) * e;
+        tr.position.x = a.from.x + (s.to.x - a.from.x) * e;
+        tr.position.z = a.from.z + (s.to.z - a.from.z) * e;
       } else if (s.type === 'spin') {
-        tr.rotation.y = anim.from.ry - s.turns * 2 * Math.PI * e;
+        tr.rotation.y = a.from.ry - s.turns * 2 * Math.PI * e;
       } else if (s.type === 'turn') {
-        tr.rotation.y = anim.from.ry + (s.to - anim.from.ry) * e;
+        tr.rotation.y = a.from.ry + (s.to - a.from.ry) * e;
       } else if (s.type === 'liftup') {
-        tr.position.y = anim.from.y + (s.to - anim.from.y) * e;      // car rises with the platform
-        if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + tr.position.y;   // posts stay fixed
+        tr.position.y = a.from.y + (s.to - a.from.y) * e;
+        if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + tr.position.y;
       }
       if (k >= 1) {
-        anim.i++;
-        if (anim.i >= anim.steps.length) {
-          tr.position.x = anim.end.x; tr.position.z = anim.end.z; tr.rotation.y = anim.end.ry;
-          if (anim.end.y !== undefined) { tr.position.y = anim.end.y; if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + anim.end.y; }
-          startNextTask(); return;
+        a.i++;
+        if (a.i >= a.steps.length) {
+          tr.position.x = a.end.x; tr.position.z = a.end.z; tr.rotation.y = a.end.ry;
+          if (a.end.y !== undefined) { tr.position.y = a.end.y; if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + a.end.y; }
+          return true;
         }
-        anim.t = 0;
-        anim.from = { x: tr.position.x, z: tr.position.z, ry: tr.rotation.y, y: tr.position.y };
+        a.t = 0;
+        a.from = { x: tr.position.x, z: tr.position.z, ry: tr.rotation.y, y: tr.position.y };
       }
+      return false;
+    }
+    function stepScenario(dt) {
+      for (let i = anims.length - 1; i >= 0; i--) if (advanceOne(anims[i], dt)) anims.splice(i, 1);
+      sinceLaunch += dt;
+      while (taskQueue.length) {
+        const next = taskQueue[0];
+        if (anims.length === 0) { taskQueue.shift(); launch(next); continue; }        // start a fresh convoy / lone task
+        if (sameDir(next.dir, convoyDir) && sinceLaunch >= CFG.gap && !anims.some(x => x.tray === next.tray)) {
+          taskQueue.shift(); launch(next); continue;                                   // stagger same-direction moves
+        }
+        break;   // different direction (or a lone task) -> wait for the running ones to finish
+      }
+      if (running && anims.length === 0 && taskQueue.length === 0) { running = false; flash('הדמיה הסתיימה ✓'); }
     }
 
     // ---- simple single-car demo (aisle / spin-return) ----
@@ -1128,7 +1233,8 @@
 
     // A* : slide tiles so that car T reaches the gateway cell (blank starts at gateway)
     // generic sliding-puzzle A* : slide tiles so car T reaches `goal`. Supports 1+ blank cells.
-    function solvePuzzle(startBoard, cells, neighbors, goal, T) {
+    // extraGoal(board) — optional extra condition that must also hold at the goal (e.g. a cell must be empty).
+    function solvePuzzle(startBoard, cells, neighbors, goal, T, extraGoal) {
       const [gc, gr] = goal.split(',').map(Number);
       const enc = b => cells.map(k => b[k]).join('.');
       const cellOfT = b => cells.find(k => b[k] === T);
@@ -1143,7 +1249,7 @@
         const cur = open.splice(bi, 1)[0];
         if (closed.has(cur.key)) continue;
         closed.add(cur.key);
-        if (cur.b[goal] === T) {
+        if (cur.b[goal] === T && (!extraGoal || extraGoal(cur.b))) {
           const moves = []; let k = cur.key;
           while (came.has(k)) { const c = came.get(k); moves.unshift(c.move); k = c.pkey; }
           return moves;
@@ -1183,7 +1289,8 @@
                  { type: 'move', to: { x: e1x, z: e1z }, dur: dur(Math.hypot(ttx - e1x, ttz - e1z)) } ] };
     }
     // full exit: -> turntable -> align to lift -> along the lift axis into the lift -> lift rises
-    function fullExit(g) {
+    // viaE1: block 2 cars must pass through E1 (the aisle transit point) before the turntable
+    function fullExit(g, viaE1) {
       const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
       const lx = liftGroup ? liftGroup.position.x : ttx;
       const lz = liftGroup ? liftGroup.position.z : ttz;
@@ -1194,20 +1301,26 @@
       const lux = Math.cos(lry), luz = -Math.sin(lry);
       const t = (ttz - lz) / (luz || 1e-9);
       const ix = lx + lux * t;
-      return { tray: g, end: { x: lx, z: lz, ry: alignTo, y: H },
-        steps: [
-          { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(p.x - ttx, p.z - ttz)) },
-          { type: 'turn', to: alignTo, dur: spinDur(turnDeg) },
-          { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },
-          { type: 'move', to: { x: lx, z: lz }, dur: dur(Math.hypot(ix - lx, ttz - lz)) },
-          { type: 'liftup', to: H, dur: Math.max(0.4, H / CFG.lift) },
-        ] };
+      const steps = [];
+      if (viaE1 && e1Group) {                              // route through E1 first, then straight to the turntable
+        const e1x = e1Group.position.x, e1z = e1Group.position.z;
+        steps.push({ type: 'move', to: { x: e1x, z: e1z }, dur: dur(Math.hypot(p.x - e1x, p.z - e1z)) });
+        steps.push({ type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(e1x - ttx, e1z - ttz)) });
+      } else {
+        steps.push({ type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(p.x - ttx, p.z - ttz)) });
+      }
+      steps.push(
+        { type: 'turn', to: alignTo, dur: spinDur(turnDeg) },
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },
+        { type: 'move', to: { x: lx, z: lz }, dur: dur(Math.hypot(ix - lx, ttz - lz)) },
+        { type: 'liftup', to: H, dur: Math.max(0.4, H / CFG.lift) });
+      return { tray: g, end: { x: lx, z: lz, ry: alignTo, y: H }, steps };
     }
     const moveTask = (g, wx, wz, ry) => ({ tray: g, end: { x: wx, z: wz, ry: (ry != null ? ry : g.rotation.y) },
       steps: [{ type: 'move', to: { x: wx, z: wz }, dur: dur(Math.hypot(g.position.x - wx, g.position.z - wz)) }] });
 
     function extractFromBlock1(T) {
-      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
       const M = blockModel();
       if (!M) { flash('בלוק 1 לא זוהה'); return; }
@@ -1220,7 +1333,12 @@
       board[M.gateway] = 0;
       const sol = solvePuzzle(board, M.cells, M.neighbors, M.gateway, T);
       if (!sol) { flash('לא נמצא פתרון חילוץ'); return; }
-      sol.forEach(mv => { const b = M.cellWorld[mv.to]; tasks.push(moveTask(M.carByNum[mv.car], b.x, b.z)); });
+      sol.forEach(mv => {
+        const a = M.cellWorld[mv.from], b = M.cellWorld[mv.to];
+        const dx = b.x - a.x, dz = b.z - a.z, dm = Math.hypot(dx, dz) || 1;
+        const t = moveTask(M.carByNum[mv.car], b.x, b.z); t.dir = { x: dx / dm, z: dz / dm };
+        tasks.push(t);
+      });
       tasks.push(fullExit(M.carByNum[T]));                // target -> exit through the lift
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' — ' + sol.length + ' הזזות');
@@ -1250,37 +1368,36 @@
     }
 
     function extractFromBlock2(T) {
-      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
       const M = block2Model();
       if (!M) { flash('בלוק 2 לא זוהה'); return; }
       if (!Object.values(M.numByCell).includes(T)) { flash('רכב ' + T + ' לא בבלוק 2'); return; }
       const c21 = M.tray(21);
-      const orig21 = { x: c21.position.x, z: c21.position.z, ry: c21.rotation.y };
-      const a1 = M.cellWorld[M.A1], a0 = M.cellWorld[M.A0];
+      const a1 = M.cellWorld[M.A1];
       const tasks = [];
-      // 1) car 21 -> in front of car 14 (A1) : opens the aisle blank A0 near E1
+      // 1) car 21 -> in front of car 14 (A1) : gives the aisle blank A0 a second neighbour so A* stays cheap
       tasks.push(moveTask(c21, a1.x, a1.z));
-      // 2) 15-puzzle: bring T to A0 (the empty aisle spot near E1)
+      // 2) 15-puzzle: bring T to A0 AND leave A1 empty. With one blank, requiring A1 empty forces every other
+      //    car (car 21 included) into a real grid cell — so the aisle exit lane is clear when T drives to E1.
       const board = {}; M.cells.forEach(k => board[k] = M.numByCell[k] || 0);
-      const sol = solvePuzzle(board, M.cells, M.neighbors, M.A0, T);
+      const sol = solvePuzzle(board, M.cells, M.neighbors, M.A0, T, b => b[M.A1] === 0);
       if (!sol) { flash('לא נמצא פתרון בלוק 2'); return; }
       sol.forEach(mv => {
         const g = M.tray(mv.car), a = M.cellWorld[mv.from], b = M.cellWorld[mv.to];
-        tasks.push({ tray: g, end: { x: b.x, z: b.z, ry: g.rotation.y },
+        const dx = b.x - a.x, dz = b.z - a.z, dm = Math.hypot(dx, dz) || 1;
+        tasks.push({ tray: g, dir: { x: dx / dm, z: dz / dm }, end: { x: b.x, z: b.z, ry: g.rotation.y },
           steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] });
       });
-      // 3) target now at A0 -> exit through E1 / turntable / lift
-      tasks.push(fullExit(M.tray(T)));
-      // 4) car 21 returns to its original spot
-      tasks.push(moveTask(c21, orig21.x, orig21.z, orig21.ry));
+      // 3) target at A0, aisle lane (A1) empty, car 21 parked in a grid cell -> T drives A0 -> E1 -> turntable -> lift
+      tasks.push(fullExit(M.tray(T), true));
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' מבלוק 2 — ' + sol.length + ' הזזות');
     }
 
     function runScenario(num) {
       if (isNaN(num)) { flash('מספר רכב לא תקין'); return; }
-      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (BLOCK1.has(num)) extractFromBlock1(num);
       else if (BLOCK2.has(num)) extractFromBlock2(num);
       else playCar(num);
@@ -1296,18 +1413,31 @@
       runScenario(num);
     }
     document.getElementById('play').onclick = playScenario;
+    const pauseBtn = document.getElementById('pause');
+    function setPaused(p) {
+      paused = p;
+      pauseBtn.textContent = paused ? '▶ המשך' : '⏸ השהה';
+      pauseBtn.classList.toggle('prim', paused);
+    }
+    pauseBtn.onclick = () => {
+      if (!busy() && !paused) { flash('אין תרחיש רץ להשהות'); return; }
+      setPaused(!paused);
+      flash(paused ? 'התרחיש הושהה ⏸' : 'התרחיש ממשיך ▶');
+    };
     document.getElementById('resetsim').onclick = resetSim;
 
     // ---- ⚙ settings panel wiring ----
     const cfgTravel = document.getElementById('cfgTravel');
     const cfgSpin = document.getElementById('cfgSpin');
     const cfgLift = document.getElementById('cfgLift');
+    const cfgGap = document.getElementById('cfgGap');
     function readCfg() {
       CFG.travel = Math.max(0.1, parseFloat(cfgTravel.value) || 2.5);
       CFG.spin = Math.max(1, parseFloat(cfgSpin.value) || 120);
       CFG.lift = Math.max(0.1, parseFloat(cfgLift.value) || 1.0);
+      { const v = parseFloat(cfgGap.value); CFG.gap = isNaN(v) ? 1 : Math.max(0, v); }
     }
-    [cfgTravel, cfgSpin, cfgLift].forEach(el => el.addEventListener('change', readCfg));
+    [cfgTravel, cfgSpin, cfgLift, cfgGap].forEach(el => el.addEventListener('change', readCfg));
     readCfg();
     document.getElementById('runExtract').onclick = () =>
       runScenario(parseInt(document.getElementById('cfgCar').value, 10));
@@ -1323,7 +1453,7 @@
       if (t === undefined) t = lastT;
       const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
       lastT = t;
-      if (anim) advanceAnim(dt);
+      if (!paused) stepScenario(dt);
       if (boxHelper) boxHelper.update();
       drawCompass();
       renderer.render(scene, camera);
