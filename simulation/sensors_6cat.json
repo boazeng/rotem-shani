@@ -1,0 +1,1101 @@
+[
+{
+"address": "P000",
+"cabinet": "main",
+"device": "Emergency (OP, MPB)",
+"function": "אנקודר",
+"system": "control"
+},
+{
+"address": "P001",
+"cabinet": "main",
+"device": "Reset button",
+"function": "איפוס",
+"system": "control"
+},
+{
+"address": "P002",
+"cabinet": "main",
+"device": "#1 Lift EOCR Trip(L',SH',DO')",
+"function": "עומס תרמי EOCR",
+"system": "lift1"
+},
+{
+"address": "P003",
+"cabinet": "main",
+"device": "#1 Lift Inverter Trip(L',SH')",
+"function": "תקלת אינוורטר",
+"system": "lift1"
+},
+{
+"address": "P004",
+"cabinet": "main",
+"device": "#1 Lift Inverter Run(L',SH')",
+"function": "ריצת אינוורטר",
+"system": "lift1"
+},
+{
+"address": "P005",
+"cabinet": "main",
+"device": "#1 Lift Up decel.",
+"function": "האטה",
+"system": "lift1"
+},
+{
+"address": "P006",
+"cabinet": "main",
+"device": "#1 Lift Up over-run",
+"function": "גבול חריגה",
+"system": "lift1"
+},
+{
+"address": "P007",
+"cabinet": "main",
+"device": "#1 Lift Weight up over-run",
+"function": "גבול חריגה",
+"system": "lift1"
+},
+{
+"address": "P008",
+"cabinet": "main",
+"device": "#1 Lift Down decel.",
+"function": "האטה",
+"system": "lift1"
+},
+{
+"address": "P009",
+"cabinet": "main",
+"device": "#1 Lift Down over-run",
+"function": "גבול חריגה",
+"system": "lift1"
+},
+{
+"address": "P00A",
+"cabinet": "main",
+"device": "#1 Lift Weight down over-run",
+"function": "גבול חריגה",
+"system": "lift1"
+},
+{
+"address": "P00B",
+"cabinet": "main",
+"device": "Car, Pallet over check",
+"function": "—",
+"system": "control"
+},
+{
+"address": "P00C",
+"cabinet": "main",
+"device": "Human motion check",
+"function": "—",
+"system": "control"
+},
+{
+"address": "P00E",
+"cabinet": "main",
+"device": "#1 LIFT ENC' AL",
+"function": "אנקודר",
+"system": "lift1"
+},
+{
+"address": "P00F",
+"cabinet": "main",
+"device": "#1 LIFT ENC' BL",
+"function": "אנקודר",
+"system": "lift1"
+},
+{
+"address": "P010",
+"cabinet": "main",
+"device": "OP key Auto",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P011",
+"cabinet": "main",
+"device": "OP key Manual",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P012",
+"cabinet": "main",
+"device": "OP select Open switch",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P013",
+"cabinet": "main",
+"device": "OP select Close switch",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P014",
+"cabinet": "main",
+"device": "Door open check",
+"function": "דלת פתוחה",
+"system": "door"
+},
+{
+"address": "P015",
+"cabinet": "main",
+"device": "Door close check",
+"function": "דלת סגורה",
+"system": "door"
+},
+{
+"address": "P016",
+"cabinet": "main",
+"device": "MPB Semi-auto",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P017",
+"cabinet": "main",
+"device": "MPB Manual",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P018",
+"cabinet": "main",
+"device": "MPB Up/FWD",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P019",
+"cabinet": "main",
+"device": "MPB Down/REV.",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P01C",
+"cabinet": "main",
+"device": "Temp Store Level check",
+"function": "חיישן קומה/level",
+"system": "temp"
+},
+{
+"address": "P01D",
+"cabinet": "main",
+"device": "Temp Store Front Pallet Stop",
+"function": "עצירת פלטה",
+"system": "temp"
+},
+{
+"address": "P01E",
+"cabinet": "main",
+"device": "Temp Store Rear Pallet Stop",
+"function": "עצירת פלטה",
+"system": "temp"
+},
+{
+"address": "P01F",
+"cabinet": "main",
+"device": "Temp Store Pallet Decel.",
+"function": "האטה",
+"system": "temp"
+},
+{
+"address": "P020",
+"cabinet": "main",
+"device": "MPB BCD 1",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P021",
+"cabinet": "main",
+"device": "MPB BCD 2",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P022",
+"cabinet": "main",
+"device": "MPB BCD 4",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P023",
+"cabinet": "main",
+"device": "MPB BCD 8",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P024",
+"cabinet": "main",
+"device": "MPB BCD 10",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P025",
+"cabinet": "main",
+"device": "MPB BCD 20",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P026",
+"cabinet": "main",
+"device": "MPB BCD 40",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P027",
+"cabinet": "main",
+"device": "MPB BCD 80",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P028",
+"cabinet": "main",
+"device": "#1 Lift Mirror Left FWD",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P029",
+"cabinet": "main",
+"device": "#1 Lift Mirror Left BWD",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P02A",
+"cabinet": "main",
+"device": "#1 Lift Mirror Right FWD",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P02B",
+"cabinet": "main",
+"device": "#1 Lift Mirror Right BWD",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P02C",
+"cabinet": "main",
+"device": "#1 Lift Door Left FWD",
+"function": "—",
+"system": "lift1"
+},
+{
+"address": "P02D",
+"cabinet": "main",
+"device": "#1 Lift Door Left BWD",
+"function": "—",
+"system": "lift1"
+},
+{
+"address": "P02E",
+"cabinet": "main",
+"device": "#1 Lift Door Right FWD",
+"function": "—",
+"system": "lift1"
+},
+{
+"address": "P02F",
+"cabinet": "main",
+"device": "#1 Lift Door Right BWD",
+"function": "—",
+"system": "lift1"
+},
+{
+"address": "P030",
+"cabinet": "main",
+"device": "#1 Lift Car front bumper",
+"function": "פגוש",
+"system": "lift1"
+},
+{
+"address": "P031",
+"cabinet": "main",
+"device": "#1 Lift Car rear bumper",
+"function": "פגוש",
+"system": "lift1"
+},
+{
+"address": "P032",
+"cabinet": "main",
+"device": "#1 Lift Left side mirror",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P033",
+"cabinet": "main",
+"device": "#1 Lift Right side mirror",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P034",
+"cabinet": "main",
+"device": "#1 Lift Car check(cross)",
+"function": "זיהוי רכב",
+"system": "lift1"
+},
+{
+"address": "P035",
+"cabinet": "main",
+"device": "#1 Car height(sedan)",
+"function": "גובה",
+"system": "lift1"
+},
+{
+"address": "P036",
+"cabinet": "main",
+"device": "#1 Lift Door safety",
+"function": "בטיחות דלת",
+"system": "lift1"
+},
+{
+"address": "P037",
+"cabinet": "main",
+"device": "#1 Lift Car height(RV)",
+"function": "גובה",
+"system": "lift1"
+},
+{
+"address": "P038",
+"cabinet": "main",
+"device": "#1 Lift Level #1",
+"function": "חיישן קומה/level",
+"system": "lift1"
+},
+{
+"address": "P039",
+"cabinet": "main",
+"device": "#1 Lift Level #2",
+"function": "חיישן קומה/level",
+"system": "lift2"
+},
+{
+"address": "P03A",
+"cabinet": "main",
+"device": "#1 Lift Home",
+"function": "בית/home",
+"system": "lift1"
+},
+{
+"address": "P03B",
+"cabinet": "main",
+"device": "#1 Lift Front pallet stop",
+"function": "עצירת פלטה",
+"system": "lift1"
+},
+{
+"address": "P03C",
+"cabinet": "main",
+"device": "#1 Lift Rear pallet stop",
+"function": "עצירת פלטה",
+"system": "lift1"
+},
+{
+"address": "P03D",
+"cabinet": "main",
+"device": "#1 Lift Pallet decel.",
+"function": "האטה",
+"system": "lift1"
+},
+{
+"address": "P03E",
+"cabinet": "main",
+"device": "#1 Lift Wire cut",
+"function": "ניתוק כבל",
+"system": "lift1"
+},
+{
+"address": "P03F",
+"cabinet": "main",
+"device": "#1 Lift Car rear mirror",
+"function": "מראה",
+"system": "lift1"
+},
+{
+"address": "P040",
+"cabinet": "main",
+"device": "#2 EOCR Trip(LI',SH',DO')",
+"function": "עומס תרמי EOCR",
+"system": "lift2"
+},
+{
+"address": "P041",
+"cabinet": "main",
+"device": "#2 Inverter Trip(LI',SH')",
+"function": "תקלת אינוורטר",
+"system": "lift2"
+},
+{
+"address": "P042",
+"cabinet": "main",
+"device": "#2 Inverter Run(LI',SH')",
+"function": "ריצת אינוורטר",
+"system": "lift2"
+},
+{
+"address": "P043",
+"cabinet": "main",
+"device": "#2 Left Lift Up decel.",
+"function": "האטה",
+"system": "lift2"
+},
+{
+"address": "P044",
+"cabinet": "main",
+"device": "#2 Left Lift Up over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P045",
+"cabinet": "main",
+"device": "#2 Left Lift Weight up over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P046",
+"cabinet": "main",
+"device": "#2 Left Lift Down decel.",
+"function": "האטה",
+"system": "lift2"
+},
+{
+"address": "P047",
+"cabinet": "main",
+"device": "#2 Left Lift Down over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P048",
+"cabinet": "main",
+"device": "#2 Left Lift Weight down over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P049",
+"cabinet": "main",
+"device": "#2 Cart Lift Store Level check",
+"function": "חיישן קומה/level",
+"system": "lift2"
+},
+{
+"address": "P04A",
+"cabinet": "main",
+"device": "#2 Right Lift Up decel.",
+"function": "האטה",
+"system": "lift2"
+},
+{
+"address": "P04B",
+"cabinet": "main",
+"device": "#2 Right Lift Up over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P04C",
+"cabinet": "main",
+"device": "#2 Right Lift Weight up over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P04D",
+"cabinet": "main",
+"device": "#2 Right Lift Down decel.",
+"function": "האטה",
+"system": "lift2"
+},
+{
+"address": "P04E",
+"cabinet": "main",
+"device": "#2 Right Lift Down over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P04F",
+"cabinet": "main",
+"device": "#2 Right Lift Weight down over-run",
+"function": "גבול חריגה",
+"system": "lift2"
+},
+{
+"address": "P050",
+"cabinet": "main",
+"device": "#2 CART LIFT LEFT ENC' AL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P051",
+"cabinet": "main",
+"device": "#2 CART LIFT LEFT ENC' BL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P052",
+"cabinet": "main",
+"device": "#2 CART LIFT CENTER ENC' AL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P053",
+"cabinet": "main",
+"device": "#2 CART LIFT CENTER ENC' BL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P054",
+"cabinet": "main",
+"device": "#2 CART LIFT RIGHT ENC' AL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P055",
+"cabinet": "main",
+"device": "#2 CART LIFT RIGHT ENC' BL",
+"function": "אנקודר",
+"system": "lift2"
+},
+{
+"address": "P056",
+"cabinet": "main",
+"device": "#2 Cart Lift Level #1",
+"function": "חיישן קומה/level",
+"system": "lift2"
+},
+{
+"address": "P057",
+"cabinet": "main",
+"device": "#2 Cart Lift Level #2",
+"function": "חיישן קומה/level",
+"system": "lift2"
+},
+{
+"address": "P058",
+"cabinet": "main",
+"device": "#2 Cart Lift Left Chain Cut",
+"function": "ניתוק שרשרת",
+"system": "lift2"
+},
+{
+"address": "P059",
+"cabinet": "main",
+"device": "#2 Cart Lift Right Chain Cut",
+"function": "ניתוק שרשרת",
+"system": "lift2"
+},
+{
+"address": "P05A",
+"cabinet": "main",
+"device": "#2 Cart Lift Left Chain sag #1",
+"function": "רפיון שרשרת",
+"system": "lift2"
+},
+{
+"address": "P05B",
+"cabinet": "main",
+"device": "#2 Cart Lift Left Chain sag #2",
+"function": "רפיון שרשרת",
+"system": "lift2"
+},
+{
+"address": "P05C",
+"cabinet": "main",
+"device": "#2 Cart Lift Right Chain sag #1",
+"function": "רפיון שרשרת",
+"system": "lift2"
+},
+{
+"address": "P05D",
+"cabinet": "main",
+"device": "#2 Cart Lift Right Chain sag #2",
+"function": "רפיון שרשרת",
+"system": "lift2"
+},
+{
+"address": "P060",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Left FWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P061",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Left BWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P062",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Left FWD(?)",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P063",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Left BWD(?)",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P064",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Center FWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P065",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Center BWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P066",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Center FWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P067",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Center BWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P068",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Right FWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P069",
+"cabinet": "main",
+"device": "#2 Cart Lift Front Right BWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P06A",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Right FWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P06B",
+"cabinet": "main",
+"device": "#2 Cart Lift Rear Right BWD",
+"function": "—",
+"system": "lift2"
+},
+{
+"address": "P070",
+"cabinet": "main",
+"device": "#2 FLOOR EOCR Trip(SH')",
+"function": "עומס תרמי EOCR",
+"system": "lift2"
+},
+{
+"address": "P071",
+"cabinet": "main",
+"device": "#2 FLOOR Inverter Trip(SH')",
+"function": "תקלת אינוורטר",
+"system": "lift2"
+},
+{
+"address": "P072",
+"cabinet": "main",
+"device": "#2 FLOOR Inverter Run(SH')",
+"function": "ריצת אינוורטר",
+"system": "lift2"
+},
+{
+"address": "P000",
+"cabinet": "cart",
+"device": "ENC' AL",
+"function": "אנקודר",
+"system": "control"
+},
+{
+"address": "P001",
+"cabinet": "cart",
+"device": "ENC' BL",
+"function": "אנקודר",
+"system": "control"
+},
+{
+"address": "P002",
+"cabinet": "cart",
+"device": "MPB Manual",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P003",
+"cabinet": "cart",
+"device": "MPB Semi-auto",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P004",
+"cabinet": "cart",
+"device": "MPB Position FWD",
+"function": "מיקום",
+"system": "control"
+},
+{
+"address": "P005",
+"cabinet": "cart",
+"device": "MPB Position REV",
+"function": "מיקום",
+"system": "control"
+},
+{
+"address": "P006",
+"cabinet": "cart",
+"device": "MPB Shifting FWD",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P007",
+"cabinet": "cart",
+"device": "MPB Shifting REV",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P008",
+"cabinet": "cart",
+"device": "MPB Left driving",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P009",
+"cabinet": "cart",
+"device": "MPB Right driving",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P00A",
+"cabinet": "cart",
+"device": "MPB Home button",
+"function": "בית/home",
+"system": "control"
+},
+{
+"address": "P00B",
+"cabinet": "cart",
+"device": "MPB Force manual",
+"function": "פקד תפעול",
+"system": "control"
+},
+{
+"address": "P00C",
+"cabinet": "cart",
+"device": "MPB Reset",
+"function": "איפוס",
+"system": "control"
+},
+{
+"address": "P00D",
+"cabinet": "cart",
+"device": "MPB Emergency",
+"function": "אנקודר",
+"system": "control"
+},
+{
+"address": "P00E",
+"cabinet": "cart",
+"device": "Inverter fault",
+"function": "—",
+"system": "cart"
+},
+{
+"address": "P00F",
+"cabinet": "cart",
+"device": "EOCR trip",
+"function": "עומס תרמי EOCR",
+"system": "cart"
+},
+{
+"address": "P040",
+"cabinet": "cart",
+"device": "Front pallet stop",
+"function": "עצירת פלטה",
+"system": "cart"
+},
+{
+"address": "P041",
+"cabinet": "cart",
+"device": "Rear pallet stop",
+"function": "עצירת פלטה",
+"system": "cart"
+},
+{
+"address": "P042",
+"cabinet": "cart",
+"device": "Linking level #1(left)",
+"function": "חיישן קומה/level",
+"system": "cart"
+},
+{
+"address": "P043",
+"cabinet": "cart",
+"device": "Linking level #2(right)",
+"function": "חיישן קומה/level",
+"system": "cart"
+},
+{
+"address": "P044",
+"cabinet": "cart",
+"device": "Position front check",
+"function": "מיקום",
+"system": "cart"
+},
+{
+"address": "P045",
+"cabinet": "cart",
+"device": "Position center check",
+"function": "מיקום",
+"system": "cart"
+},
+{
+"address": "P046",
+"cabinet": "cart",
+"device": "Position rear check",
+"function": "מיקום",
+"system": "cart"
+},
+{
+"address": "P047",
+"cabinet": "cart",
+"device": "Driving level #1(left)",
+"function": "חיישן קומה/level",
+"system": "cart"
+},
+{
+"address": "P048",
+"cabinet": "cart",
+"device": "Driving level #2(right)",
+"function": "חיישן קומה/level",
+"system": "cart"
+},
+{
+"address": "P049",
+"cabinet": "cart",
+"device": "Cart<>Lift check",
+"function": "—",
+"system": "cart"
+},
+{
+"address": "P04A",
+"cabinet": "cart",
+"device": "Car / Pallet over check",
+"function": "—",
+"system": "cart"
+},
+{
+"address": "P04B",
+"cabinet": "cart",
+"device": "Left driving over-run",
+"function": "גבול חריגה",
+"system": "cart"
+},
+{
+"address": "P04C",
+"cabinet": "cart",
+"device": "Right driving over-run",
+"function": "גבול חריגה",
+"system": "cart"
+},
+{
+"address": "P04D",
+"cabinet": "cart",
+"device": "Cart home check",
+"function": "בית/home",
+"system": "cart"
+},
+{
+"address": "P080",
+"cabinet": "cart",
+"device": "Turn table stop #1",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P081",
+"cabinet": "cart",
+"device": "Turn table stop #2",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P082",
+"cabinet": "cart",
+"device": "T/T Rotation position",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P083",
+"cabinet": "cart",
+"device": "T/T 0° check",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P084",
+"cabinet": "cart",
+"device": "T/T 180° check",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P085",
+"cabinet": "cart",
+"device": "MPB T/T Left button",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P086",
+"cabinet": "cart",
+"device": "MPB T/T Right button",
+"function": "עצירת turn-table",
+"system": "cart"
+},
+{
+"address": "P120",
+"cabinet": "cart",
+"device": "MPB Linking Front select",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P121",
+"cabinet": "cart",
+"device": "MPB Linking Rear select",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P122",
+"cabinet": "cart",
+"device": "MPB Linking FWD button",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P123",
+"cabinet": "cart",
+"device": "MPB Linking REV button",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P124",
+"cabinet": "cart",
+"device": "Front pallet entry linking stop",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P125",
+"cabinet": "cart",
+"device": "Front pallet exit linking stop",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P126",
+"cabinet": "cart",
+"device": "Front pallet entry hook stop",
+"function": "—",
+"system": "cart"
+},
+{
+"address": "P127",
+"cabinet": "cart",
+"device": "Rear pallet entry linking stop",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P128",
+"cabinet": "cart",
+"device": "Rear pallet exit linking stop",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P129",
+"cabinet": "cart",
+"device": "Rear pallet entry hook stop",
+"function": "—",
+"system": "cart"
+},
+{
+"address": "P12A",
+"cabinet": "cart",
+"device": "Front linking FWD check",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P12B",
+"cabinet": "cart",
+"device": "Front linking REV check",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P12C",
+"cabinet": "cart",
+"device": "Rear linking FWD check",
+"function": "חיבור/linking",
+"system": "cart"
+},
+{
+"address": "P12D",
+"cabinet": "cart",
+"device": "Rear linking REV check",
+"function": "חיבור/linking",
+"system": "cart"
+}
+]

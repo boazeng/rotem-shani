@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>רותם שני — מתקן חניה רובוטי (סימולציה)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0e1a; font-family: "Segoe UI", Arial, sans-serif; }
+    #app { width: 100vw; height: 100vh; display: block; }
+    #hud {
+      position: fixed; top: 12px; right: 12px; z-index: 10;
+      background: rgba(14,20,36,0.82); color: #dbe6ff; border: 1px solid #24406e;
+      border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7;
+      backdrop-filter: blur(6px); min-width: 210px;
+    }
+    #hud h1 { font-size: 15px; margin-bottom: 6px; color: #7fd0ff; }
+    #hud .row { display: flex; justify-content: space-between; gap: 10px; }
+    #hud .k { color: #8ea6cf; }
+    #hud .legend { margin-top: 8px; border-top: 1px solid #24406e; padding-top: 8px; }
+    #hud .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+    #help {
+      position: fixed; bottom: 12px; right: 12px; z-index: 10;
+      background: rgba(14,20,36,0.7); color: #9fb3d9; border: 1px solid #24406e;
+      border-radius: 8px; padding: 8px 12px; font-size: 12px;
+    }
+    #compass {
+      position: fixed; bottom: 12px; left: 12px; z-index: 10;
+      width: 84px; height: 84px; background: rgba(14,20,36,0.7);
+      border: 1px solid #24406e; border-radius: 50%;
+    }
+    label.tog { cursor: pointer; user-select: none; }
+    label.tog input { vertical-align: middle; margin-left: 5px; }
+    #settings {
+      position: fixed; top: 12px; left: 12px; z-index: 10;
+      background: rgba(14,20,36,0.86); color: #dbe6ff; border: 1px solid #24406e;
+      border-radius: 10px; padding: 12px 14px; font-size: 13px; backdrop-filter: blur(6px);
+      min-width: 210px;
+    }
+    #settings h2 { font-size: 14px; margin-bottom: 8px; color: #7fd0ff; }
+    #settings label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+    #settings .u { color: #8ea6cf; font-size: 11px; margin-right: auto; margin-left: 6px; }
+    #settings input {
+      width: 68px; background: #0f1626; color: #eaf3ff; border: 1px solid #35538a;
+      border-radius: 6px; padding: 4px 6px; font-size: 13px; text-align: center;
+    }
+    #settings .divider { height: 1px; background: #24406e; margin: 9px 0; }
+    #settings #runExtract {
+      width: 100%; margin-top: 8px; background: #143a5a; color: #cfe8ff;
+      border: 1px solid #2f7fd0; border-radius: 7px; padding: 7px; font-size: 14px; cursor: pointer;
+    }
+    #settings #runExtract:hover { background: #1b4e78; }
+    #tools {
+      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(14,20,36,0.85); border: 1px solid #24406e; border-radius: 10px;
+      padding: 7px 12px; color: #dbe6ff; font-size: 13px; backdrop-filter: blur(6px);
+    }
+    #tools button {
+      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
+      padding: 5px 11px; font-size: 15px; cursor: pointer; min-width: 40px;
+    }
+    #tools button:hover { background: #274068; }
+    #tools #del { background: #4a1f24; border-color: #8a353f; color: #ffd0d0; min-width: 0; }
+    #tools #del:hover { background: #6a2a30; }
+    #tools .sep { width: 1px; height: 22px; background: #35538a; margin: 0 2px; }
+    #tools button.prim { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; min-width: 0; }
+    #tools button.prim:hover { background: #276e48; }
+    #tools #top, #tools #reset, #tools #wall, #tools #edit { min-width: 0; }
+    #tools button.active { background: #b06a1e; border-color: #e0a458; color: #fff3e0; }
+    #tools button.go { background: #143a5a; border-color: #2f7fd0; color: #cfe8ff; min-width: 0; }
+    #tools button.go:hover { background: #1b4e78; }
+    #tools #selinfo { color: #7fd0ff; font-variant-numeric: tabular-nums; min-width: 150px; text-align: center; }
+  </style>
+</head>
+<body>
+  <canvas id="app"></canvas>
+
+  <div id="hud">
+    <h1>רותם שני — מתקן חניה</h1>
+    <div class="row"><span class="k">קומות</span><span>1 (תת-קרקעי)</span></div>
+    <div class="row"><span class="k">מידות בור</span><span id="dim">—</span></div>
+    <div class="row"><span class="k">מגשים</span><span id="ntray">—</span></div>
+    <div class="legend">
+      <div><span class="sw" style="background:#3d5a80"></span> מגש רובוטי</div>
+      <div><span class="sw" style="background:#e0a458"></span> צלחת סיבוב (turntable)</div>
+      <div><span class="sw" style="background:#7fd0ff"></span> מעלית רכב</div>
+      <div><span class="sw" style="background:#8a8f99"></span> קירות בטון</div>
+    </div>
+    <div class="legend">
+      <label class="tog"><input type="checkbox" id="tPlan"> שרטוט (DWG)</label><br>
+      <label class="tog"><input type="checkbox" id="tNums" checked> מספרי חניה</label><br>
+      <label class="tog"><input type="checkbox" id="tCenters"> סימון מרכזים</label><br>
+      <label class="tog"><input type="checkbox" id="tGuides"> קווי עזר</label><br>
+      <label class="tog"><input type="checkbox" id="tDark" checked> חושך מוחלט (כיבוי אור סביבתי)</label><br>
+      <label class="tog"><input type="checkbox" id="tFluor" checked> פלורוסנטים</label><br>
+      <label class="tog"><input type="checkbox" id="tCeil"> תקרת קרקע</label><br>
+      <label class="tog"><input type="checkbox" id="tCars" checked> רכבים</label><br>
+      <label class="tog"><input type="checkbox" id="tGrid"> רשת</label>
+    </div>
+  </div>
+
+  <div id="settings">
+    <h2>⚙ זמני סימולציה</h2>
+    <label>מהירות נסיעה <span class="u">מ׳/ש'</span><input type="number" id="cfgTravel" value="2.5" step="0.5" min="0.5"></label>
+    <label>סיבוב צלחת <span class="u">°/ש'</span><input type="number" id="cfgSpin" value="120" step="10" min="10"></label>
+    <label>מהירות מעלית <span class="u">מ׳/ש'</span><input type="number" id="cfgLift" value="1.0" step="0.5" min="0.1"></label>
+    <div class="divider"></div>
+    <label>מספר רכב להוצאה <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
+    <button id="runExtract">▶ הפעל חילוץ</button>
+  </div>
+
+  <div id="help">⚠️ עריכה נעולה — לחץ <b>🔒 עדכן</b> כדי לאפשר שינויים<br>מצלמה: גרירה בשטח ריק = סיבוב · גלגלת = זום · קליק־ימני = הזזה<br>אובייקט: לחיצה = בחירה · גרירה = הזזה · Q/E = סיבוב · R = 90° · Delete = מחיקה<br>קיר: ➕ קיר → לחיצה על נקודת התחלה ואז נקודת סיום · Esc = יציאה</div>
+
+  <div id="tools">
+    <button id="edit" title="מצב עריכה — חובה להפעיל כדי לשנות">🔒 עדכן</button>
+    <span class="sep"></span>
+    <button id="rotL" title="סובב שמאלה (Q)">⟲</button>
+    <button id="rot90" title="הצמד ל-90° (R)">90°</button>
+    <button id="rotR" title="סובב ימינה (E)">⟳</button>
+    <button id="del" title="מחק נבחר (Delete)">🗑 מחק</button>
+    <button id="wall" title="בנה קיר: לחיצה על נקודת התחלה ואז נקודת סיום">➕ קיר</button>
+    <button id="hidecars" title="הסתר/הצג רכבים">🚗 הסתר רכבים</button>
+    <span id="selinfo">לא נבחר משטח</span>
+    <span class="sep"></span>
+    <button id="play" class="go" title="חילוץ רכב נבחר מבלוק 1 (חידת 15)">▶ הדמיה</button>
+    <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ אתחל סימולציה</button>
+    <button id="top" title="מבט על">⬇ מבט על</button>
+    <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
+    <button id="reset" title="אפס לפריסה מקורית">איפוס</button>
+  </div>
+
+  <canvas id="compass" width="84" height="84"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+  <script>
+  (async function () {
+    // ---------- load layout ----------
+    let L;
+    try {
+      L = await (await fetch('rotem_layout.json')).json();
+    } catch (e) {
+      alert('לא ניתן לטעון rotem_layout.json — יש להריץ דרך שרת מקומי (python -m http.server).');
+      return;
+    }
+
+    // ---------- scene ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0e1a);
+    scene.fog = new THREE.Fog(0x0a0e1a, 60, 220);
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('app'), antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.NoToneMapping;   // ACES desaturated the car colours (red -> pink)
+    renderer.toneMappingExposure = 1.0;
+
+    // environment map used ONLY for the cars (glossy paint / glass / chrome reflections),
+    // NOT scene.environment — that was washing the floor and walls bright white.
+    let carEnv = null;
+    try {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      carEnv = pmrem.fromScene(new THREE.RoomEnvironment(renderer), 0.04).texture;
+    } catch (e) { /* reflections optional */ }
+
+    // ---------- coordinate frame ----------
+    // layout is (east, north) meters. World: X=east, Z=-north, Y=up. Center on bbox middle.
+    const W = L.bbox_m[0], D = L.bbox_m[1];
+    const cx = W / 2, cn = D / 2;
+    const H = L.floor_height_m || 3.0;
+    // plan(east,north) -> world(x,z)
+    const px = (e) => e - cx;
+    const pz = (n) => -(n - cn);
+    const v2 = (p) => new THREE.Vector2(px(p[0]), pz(p[1]));
+
+    // ---------- lighting: fluorescent ceiling fixtures (like a real underground car park) ----------
+    const hemi = new THREE.HemisphereLight(0xc2ccd8, 0x2a2e34, 0.16);   // soft even fill
+    scene.add(hemi);
+    const amb = new THREE.AmbientLight(0xffffff, 0.06);
+    scene.add(amb);
+    // a faint directional just for soft grounding shadows under the cars
+    const key = new THREE.DirectionalLight(0xffffff, 0.25);
+    key.position.set(10, 30, 8);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    const s = 22;
+    key.shadow.camera.left = -s; key.shadow.camera.right = s;
+    key.shadow.camera.top = s; key.shadow.camera.bottom = -s;
+    key.shadow.camera.near = 1; key.shadow.camera.far = 90;
+    key.shadow.bias = -0.0004;
+    scene.add(key);
+
+    // fluorescent ceiling fixtures — each is a movable object (tube + point light).
+    // created later (after `movables` exists); grid or restored from the saved layout.
+    const fixtures = new THREE.Group(); scene.add(fixtures);
+    const fixtureGroups = [];
+    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xeef4ff });
+    const FX_Y = H - 0.06;
+    function makeFixture(eastNorth, rotDeg) {
+      const fx = new THREE.Group();
+      fx.add(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.06, 0.22), tubeMat));
+      const pl = new THREE.PointLight(0xf2f6ff, 0.36, 20, 1.2); pl.position.y = -0.2;
+      fx.add(pl);
+      fx.position.set(px(eastNorth[0]), FX_Y, pz(eastNorth[1]));
+      fx.rotation.y = -(rotDeg || 0) * Math.PI / 180;
+      fx.userData.isFixture = true;
+      fixtures.add(fx); fixtureGroups.push(fx); movables.push(fx);
+      return fx;
+    }
+
+    // ============ BUILD THE PIT (structure shape) ============
+    const outline = L.outline;               // [[e,n],...]
+    const shapePts = outline.map(v2);
+
+    // ---- floor slab (exact polygon) ----
+    const shape = new THREE.Shape(shapePts);
+    const floorGeo = new THREE.ShapeGeometry(shape);
+    floorGeo.rotateX(-Math.PI / 2);          // lay flat (XZ)
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.95, metalness: 0.0 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.position.y = 0;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // subtle floor edge outline
+    const edgePts = [...shapePts, shapePts[0]].map(p => new THREE.Vector3(p.x, 0.02, p.y));
+    const edgeGeo = new THREE.BufferGeometry().setFromPoints(edgePts);
+    scene.add(new THREE.Line(edgeGeo, new THREE.LineBasicMaterial({ color: 0x4a6fa5 })));
+
+    // ---- perimeter walls (box per edge, following the polygon) ----
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x646973, roughness: 0.95 });
+    const wallGrp = new THREE.Group();
+    const T = 0.25;
+    for (let i = 0; i < shapePts.length; i++) {
+      const a = shapePts[i], b = shapePts[(i + 1) % shapePts.length];
+      const dx = b.x - a.x, dz = b.y - a.y;
+      const len = Math.hypot(dx, dz);
+      const g = new THREE.BoxGeometry(len + T, H, T);
+      const m = new THREE.Mesh(g, wallMat);
+      m.position.set((a.x + b.x) / 2, H / 2, (a.y + b.y) / 2);
+      m.rotation.y = -Math.atan2(dz, dx);
+      m.castShadow = true; m.receiveShadow = true;
+      wallGrp.add(m);
+    }
+    scene.add(wallGrp);
+
+    // ---- ground/ceiling slab at top (toggle) ----
+    const ceilGeo = new THREE.ShapeGeometry(shape);
+    ceilGeo.rotateX(-Math.PI / 2);
+    const ceilMat = new THREE.MeshStandardMaterial({ color: 0x3a3f4a, roughness: 1.0, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    const ceil = new THREE.Mesh(ceilGeo, ceilMat);
+    ceil.position.y = H;
+    ceil.visible = false;
+    scene.add(ceil);
+
+    // ---- surrounding earth (context plane) ----
+    const earthMat = new THREE.MeshStandardMaterial({ color: 0x1a2230, roughness: 1 });
+    const earth = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), earthMat);
+    earth.rotation.x = -Math.PI / 2; earth.position.y = -0.05;
+    earth.receiveShadow = true;
+    scene.add(earth);
+
+    // ---- floor grid (toggle) ----
+    const grid = new THREE.GridHelper(Math.max(W, D) + 4, Math.round(Math.max(W, D) + 4), 0x2c4468, 0x1d2c44);
+    grid.position.y = 0.03;
+    grid.visible = false;
+    scene.add(grid);
+
+    // ---- DWG plan overlay (georeferenced texture on the floor) ----
+    // Image spans exactly the outline bbox (east 0..W, north 0..D) so it maps 1:1,
+    // sharing the same DXF frame as the trays -> perfect alignment.
+    let planMesh = null;
+    new THREE.TextureLoader().load('plan_overlay.png', (tex) => {
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      const planGeo = new THREE.PlaneGeometry(W, D);
+      planGeo.rotateX(-Math.PI / 2);
+      const planMat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: 0.9,
+        depthWrite: false, side: THREE.DoubleSide
+      });
+      planMesh = new THREE.Mesh(planGeo, planMat);
+      planMesh.position.y = 0.06;   // just above the floor slab
+      planMesh.renderOrder = 2;
+      planMesh.visible = document.getElementById('tPlan').checked;
+      scene.add(planMesh);
+    });
+
+    // ============ TRAYS + CARS ============
+    const TRAY_L = 5.05, TRAY_W = 2.15, TRAY_H = 0.18;
+    const trayMat = new THREE.MeshStandardMaterial({ color: 0x3d5a80, roughness: 0.6, metalness: 0.3 });
+    const carBodyMat = new THREE.MeshStandardMaterial({ color: 0xc9d4e0, roughness: 0.4, metalness: 0.2 });
+    const carGlassMat = new THREE.MeshStandardMaterial({ color: 0x223044, roughness: 0.2, metalness: 0.5 });
+    const carGroup = new THREE.Group();
+
+    // real car models (GLB), auto-normalized to fit the tray; falls back to a box if none load
+    const carTemplates = [];
+    let carIdx = 0;
+    // opts: { bodyMat } = name of the paint material to tint per-car (keeps all other materials)
+    const _draco = new THREE.DRACOLoader();
+    _draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/gltf/');
+    function loadCarGLB(url, opts) {
+      opts = opts || {};
+      return new Promise(resolve => {
+        const loader = new THREE.GLTFLoader();
+        loader.setDRACOLoader(_draco);
+        loader.load(url, gltf => {
+          const inner = gltf.scene;
+          inner.traverse(o => {
+            if (o.isMesh) {
+              o.castShadow = true; o.receiveShadow = true;
+              if (o.material) { o.material.envMap = carEnv; o.material.envMapIntensity = 0.85; o.material.needsUpdate = true; }
+            }
+          });
+          // 1) stand the model up: its smallest dimension is the height -> map that axis to Y
+          let box = new THREE.Box3().setFromObject(inner), size = new THREE.Vector3();
+          box.getSize(size);
+          const g1 = new THREE.Group(); g1.add(inner);
+          const axes = [size.x, size.y, size.z], up = axes.indexOf(Math.min(...axes));
+          if (up === 0) g1.rotation.z = Math.PI / 2;        // X-up -> Y-up
+          else if (up === 2) g1.rotation.x = -Math.PI / 2;  // Z-up -> Y-up
+          g1.updateWorldMatrix(true, true);
+          // 2) align the longer horizontal axis (length) to X
+          box = new THREE.Box3().setFromObject(g1); box.getSize(size);
+          const g2 = new THREE.Group(); g2.add(g1);
+          if (size.z > size.x) g2.rotation.y = Math.PI / 2;
+          g2.updateWorldMatrix(true, true);
+          // 3) center X/Z, base on the ground, scale to FIT the tray (length AND width)
+          box = new THREE.Box3().setFromObject(g2); box.getSize(size);
+          const center = new THREE.Vector3(); box.getCenter(center);
+          g2.position.set(-center.x, -box.min.y, -center.z);
+          const outer = new THREE.Group(); outer.add(g2);
+          const sLen = (TRAY_L * 0.9) / (size.x || 1);   // fit within tray length
+          const sWid = (TRAY_W * 0.9) / (size.z || 1);   // fit within tray width -> no side overhang
+          outer.scale.setScalar(Math.min(sLen, sWid));
+          outer.userData.bodyMat = opts.bodyMat || null;
+          resolve(outer);
+        }, undefined, () => resolve(null));
+      });
+    }
+
+    function makeBoxCar() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.7, 1.75), carBodyMat);
+      body.position.y = 0.55; body.castShadow = true;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 1.55), carGlassMat);
+      cabin.position.set(-0.2, 1.15, 0); cabin.castShadow = true;
+      g.add(body, cabin);
+      return g;
+    }
+    // vivid per-car body paint colors (glossy metallic, like real car paint)
+    const CAR_PAINT = [0xcc1414, 0x123fbf, 0xdde1e6, 0x111318, 0xeef1f5, 0xf0bf12,
+                       0x109a38, 0xe0670f, 0x9a1466, 0x00939f, 0x5a1fc0, 0x2a2f3a];
+    let paintIdx = 0;
+    function makeCar() {
+      if (!carTemplates.length) return makeBoxCar();
+      const tmpl = carTemplates[carIdx++ % carTemplates.length];
+      const c = tmpl.clone(true);
+      const bodyName = tmpl.userData.bodyMat;
+      const color = CAR_PAINT[paintIdx++ % CAR_PAINT.length];
+      c.traverse(o => {
+        if (!o.isMesh) return;
+        o.castShadow = true; o.receiveShadow = true;
+        if (bodyName && o.material && o.material.name === bodyName) {
+          // realistic glossy car paint: vivid colour + clearcoat + reflections of the car-only env
+          o.material = new THREE.MeshPhysicalMaterial({
+            color: color, metalness: 0.0, roughness: 0.34,
+            clearcoat: 1.0, clearcoatRoughness: 0.06,
+            envMap: carEnv, envMapIntensity: 0.75
+          });
+        }
+      });
+      return c;
+    }
+
+    function makeTray() {
+      const g = new THREE.Group();
+      const tray = new THREE.Mesh(new THREE.BoxGeometry(TRAY_L, TRAY_H, TRAY_W), trayMat);
+      tray.position.y = TRAY_H / 2; tray.castShadow = true; tray.receiveShadow = true;
+      g.add(tray);
+      const car = makeCar();
+      car.position.y = TRAY_H;
+      car.userData.isCar = true;
+      g.add(car);
+      return g;
+    }
+
+    // load a saved layout: prefer the server file (rotem_saved.json),
+    // then localStorage, else the original DWG layout.
+    const SAVE_KEY = 'rotem_trays_v1';
+    let savedLayout = null, sourceTrays = L.trays;
+    try {
+      const r = await fetch('rotem_saved.json', { cache: 'no-store' });
+      if (r.ok) savedLayout = await r.json();
+    } catch (e) { /* no server file */ }
+    if (!savedLayout) {
+      try {
+        const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (s && Array.isArray(s.trays)) savedLayout = s;
+      } catch (e) { /* ignore corrupt save */ }
+    }
+    if (savedLayout && Array.isArray(savedLayout.trays)) sourceTrays = savedLayout.trays;
+
+    // ---- number label (canvas sprite, faces camera, floats above the tray) ----
+    const labelMatCache = {};
+    function labelMaterial(n) {
+      if (labelMatCache[n]) return labelMatCache[n];
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const ctx = c.getContext('2d');
+      const r = 26, w = 128;
+      ctx.fillStyle = 'rgba(10,16,30,0.86)';
+      ctx.beginPath();
+      ctx.moveTo(r, 0); ctx.arcTo(w, 0, w, w, r); ctx.arcTo(w, w, 0, w, r);
+      ctx.arcTo(0, w, 0, 0, r); ctx.arcTo(0, 0, w, 0, r); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#37f0a0'; ctx.lineWidth = 6; ctx.stroke();
+      ctx.fillStyle = '#eaf3ff'; ctx.font = 'bold 74px Arial';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(n), 64, 70);
+      const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false });
+      labelMatCache[n] = mat; return mat;
+    }
+    function textSprite(text, col) {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d'), r = 26, w = 128;
+      x.fillStyle = 'rgba(10,16,30,0.9)';
+      x.beginPath(); x.moveTo(r, 0); x.arcTo(w, 0, w, w, r); x.arcTo(w, w, 0, w, r);
+      x.arcTo(0, w, 0, 0, r); x.arcTo(0, 0, w, 0, r); x.closePath(); x.fill();
+      x.strokeStyle = col; x.lineWidth = 7; x.stroke();
+      x.fillStyle = col; x.font = 'bold 60px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(text, 64, 70);
+      const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+      return new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false });
+    }
+
+    // ---- center marker (dot + flat ring) reused for trays & turntable ----
+    const centerMarkers = [];
+    const markerMat = new THREE.MeshBasicMaterial({ color: 0xff3b6b, depthTest: false });
+    const markerDotGeo = new THREE.SphereGeometry(0.13, 12, 12);
+    const markerRingGeo = new THREE.TorusGeometry(0.34, 0.045, 8, 24);
+    function makeCenterMarker(y) {
+      const grp = new THREE.Group();
+      const dot = new THREE.Mesh(markerDotGeo, markerMat);
+      const ring = new THREE.Mesh(markerRingGeo, markerMat); ring.rotation.x = Math.PI / 2;
+      dot.userData.isCenter = true; ring.userData.isCenter = true;
+      dot.renderOrder = 5; ring.renderOrder = 5;
+      grp.add(dot, ring);
+      grp.position.y = y;
+      grp.userData.isCenter = true;
+      centerMarkers.push(grp);
+      return grp;
+    }
+
+    // everything the user can select / drag / rotate lives in `movables`
+    const movables = [];
+    const trayGroups = [];
+    const numberLabels = [];
+    sourceTrays.forEach((t, i) => {
+      const g = makeTray();
+      g.position.set(px(t.pos[0]), 0, pz(t.pos[1]));
+      // DXF rotation is CCW about +Z(north-up). For east/north -> x/-z, world Y rotation is negated.
+      g.rotation.y = -t.rot * Math.PI / 180;
+      g.userData.isTray = true;
+      g.userData.num = (t.num != null) ? t.num : (i + 1);
+      const label = new THREE.Sprite(labelMaterial(g.userData.num));
+      label.position.set(0, 2.1, 0);   // on the Y axis -> unaffected by the tray's Y rotation
+      label.scale.set(0.9, 0.9, 0.9);
+      label.userData.isLabel = true;
+      g.add(label);
+      numberLabels.push(label);
+      g.add(makeCenterMarker(TRAY_H + 0.05));   // mark the tray center
+      carGroup.add(g);
+      trayGroups.push(g);
+      movables.push(g);
+    });
+    scene.add(carGroup);
+
+    // create the fluorescent fixtures (movable) — from the saved layout, else a default 3×4 grid
+    if (savedLayout && Array.isArray(savedLayout.fixtures)) {
+      savedLayout.fixtures.forEach(f => makeFixture(f.pos, f.rot));
+    } else {
+      const NX = 3, NZ = 4;
+      for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++)
+        makeFixture([(i + 0.5) / NX * W, (j + 0.5) / NZ * D], 0);
+    }
+
+    // helper: put a specific car object into a tray, replacing its current car
+    function setTrayCar(tg, car) {
+      const old = tg.children.find(c => c.userData.isCar);
+      const vis = old ? old.visible : true;
+      if (old) { tg.remove(old); old.traverse(o => { if (o.geometry && !o.isSprite) o.geometry.dispose(); }); }
+      car.position.y = TRAY_H; car.userData.isCar = true; car.visible = vis;
+      tg.add(car);
+      applyDark();   // keep the new car consistent with the current darkness state
+    }
+
+    // real car models (each keeps its own textures; ferrari is tinted per car)
+    const MODEL_FILES = {
+      ferrari:   { file: 'ferrari_plain.glb', bodyMat: 'Body_Color' },  // fallback only
+      barracuda: { file: 'barracuda.glb' },
+      hemicuda:  { file: 'hemicuda.glb' },
+      mercedes:  { file: 'mercedes.glb' },
+      golf:      { file: 'golf.glb' },
+      malibu:    { file: 'malibu.glb' },
+      car130:    { file: 'car130.glb' },
+      mini:      { file: 'mini.glb' },
+      corvette:  { file: 'corvette.glb' },
+      mustang:   { file: 'mustang.glb' },
+      kona:      { file: 'kona.glb' },
+      sl63:      { file: 'sl63.glb' },
+    };
+    // 11 clean models over 22 trays -> 2 each (dropped beetle/bmw = duplicate car in file, oldsmobile = env dome)
+    const TRAY_MODEL = {
+      1: 'barracuda',  2: 'hemicuda',   3: 'mercedes',   4: 'golf',
+      5: 'malibu',     6: 'car130',     7: 'mini',       8: 'corvette',
+      9: 'mustang',   10: 'kona',      11: 'sl63',
+      12: 'barracuda', 13: 'hemicuda', 14: 'mercedes',  15: 'golf',
+      16: 'malibu',   17: 'car130',    18: 'mini',      19: 'corvette',
+      20: 'mustang',  21: 'kona',      22: 'sl63',
+    };
+
+    // ferrari = fallback for any tray that has no model assigned (or whose model fails)
+    loadCarGLB('models/cars/' + MODEL_FILES.ferrari.file, { bodyMat: MODEL_FILES.ferrari.bodyMat }).then(t => {
+      if (!t) return;
+      carTemplates.push(t); carIdx = 0; paintIdx = 0;
+      trayGroups.forEach(tg => { if (!TRAY_MODEL[tg.userData.num]) setTrayCar(tg, makeCar()); });
+    });
+    // load each real model independently and drop it into its trays as soon as it is ready
+    [...new Set(Object.values(TRAY_MODEL))].forEach(key => {
+      const trays = Object.keys(TRAY_MODEL).filter(n => TRAY_MODEL[n] === key).map(Number);
+      loadCarGLB('models/cars/' + MODEL_FILES[key].file, {}).then(tmpl => {
+        if (!tmpl) return;
+        trays.forEach(num => {
+          const tg = trayGroups.find(g => g.userData.num === num);
+          if (!tg) return;
+          const car = tmpl.clone(true);
+          car.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+          setTrayCar(tg, car);
+        });
+      });
+    });
+
+    // ============ TURNTABLE (movable — the point where a car can rotate) ============
+    let turntableGroup = null;
+    const ttSrc = (savedLayout && savedLayout.turntable) ? savedLayout.turntable : L.turntable;
+    if (ttSrc) {
+      const tt = new THREE.Group();
+      const disc = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.9, 2.9, 0.12, 48),
+        new THREE.MeshStandardMaterial({ color: 0xe0a458, roughness: 0.5, metalness: 0.4 }));
+      disc.position.y = 0.06; disc.receiveShadow = true;
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(2.9, 0.06, 12, 48),
+        new THREE.MeshStandardMaterial({ color: 0xffce8a }));
+      ring.rotation.x = Math.PI / 2; ring.position.y = 0.12;
+      tt.add(disc, ring);
+      tt.add(makeCenterMarker(0.16));   // mark the turntable (rotation) center
+      tt.position.set(px(ttSrc.pos[0]), 0, pz(ttSrc.pos[1]));
+      tt.userData.isTurntable = true;
+      scene.add(tt);
+      turntableGroup = tt;
+      movables.push(tt);
+    }
+
+    // ============ E1 — turntable entry point (movable, saved) ============
+    let e1Group = null;
+    {
+      const e1def = (savedLayout && savedLayout.e1) ? savedLayout.e1
+        : [ (ttSrc ? ttSrc.pos[0] : cx), 7.9 ];   // default: under the turntable, on the aisle
+      const g = new THREE.Group();
+      const col = 0x37f0a0;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.06, 20),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55, depthTest: false }));
+      base.position.y = 0.04; base.renderOrder = 6;
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.9, 10),
+        new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+      pin.position.y = 0.95; pin.renderOrder = 6;
+      const lab = new THREE.Sprite(textSprite('E1', '#37f0a0'));
+      lab.position.y = 2.25; lab.scale.set(1.5, 1.5, 1.5);
+      g.add(base, pin, lab);
+      g.position.set(px(e1def[0]), 0, pz(e1def[1]));
+      g.userData.isEntry = true;
+      scene.add(g); movables.push(g);
+      e1Group = g;
+    }
+
+    // ============ USER WALLS (build / delete) ============
+    const userWalls = new THREE.Group();
+    scene.add(userWalls);
+    const wallGroupsArr = [];
+    const wallUserMat = new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.9 });
+    const WALL_T = 0.2;
+    function buildWall(eastNorth, rotDeg, len) {
+      const g = new THREE.Group();
+      const m = new THREE.Mesh(new THREE.BoxGeometry(len, H, WALL_T), wallUserMat);
+      m.position.y = H / 2; m.castShadow = true; m.receiveShadow = true;
+      g.add(m);
+      g.position.set(px(eastNorth[0]), 0, pz(eastNorth[1]));
+      g.rotation.y = -rotDeg * Math.PI / 180;
+      g.userData.isWall = true;
+      g.userData.len = len;
+      userWalls.add(g);
+      wallGroupsArr.push(g);
+      movables.push(g);
+      return g;
+    }
+    // create a wall from two world-space points (during drawing)
+    function addWallSeg(ax, az, bx, bz) {
+      const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+      if (len < 0.2) return null;
+      const east = (ax + bx) / 2 + cx, north = cn - (az + bz) / 2;
+      const rotDeg = (((Math.atan2(dz, dx) * 180 / Math.PI) % 360) + 360) % 360;
+      return buildWall([east, north], rotDeg, len);
+    }
+    // restore saved walls
+    if (savedLayout && Array.isArray(savedLayout.walls)) {
+      savedLayout.walls.forEach(w => buildWall(w.pos, w.rot, w.len));
+    }
+
+    // ============ CAR LIFT (movable) ============
+    let liftGroup = null, liftPlatform = null;
+    const LIFT_PLAT_Y = 0.1;
+    const liftSrc = (savedLayout && savedLayout.lift) ? savedLayout.lift : L.lift;
+    if (liftSrc) {
+      const lg = new THREE.Group();
+      const plat = new THREE.Mesh(new THREE.BoxGeometry(TRAY_L + 0.4, 0.2, TRAY_W + 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x2a4a6a, roughness: 0.5, metalness: 0.4 }));
+      plat.position.y = LIFT_PLAT_Y;
+      liftPlatform = plat;                        // only the platform rises; posts stay fixed
+      lg.add(plat);
+      const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6 });
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, H, 0.14), postMat);
+        p.position.set(sx * (TRAY_L + 0.4) / 2, H / 2, sz * (TRAY_W + 0.5) / 2);
+        lg.add(p);
+      });
+      plat.add(makeCenterMarker(0.14));          // mark the lift center; on the platform so it rises with the car
+      lg.position.set(px(liftSrc.pos[0]), 0, pz(liftSrc.pos[1]));
+      lg.rotation.y = -liftSrc.rot * Math.PI / 180;
+      lg.userData.isLift = true;
+      scene.add(lg);
+      liftGroup = lg;
+      movables.push(lg);
+    }
+
+    // ============ GUIDE LINES (diagnostic: lift axis × travel direction) ============
+    const guideLines = new THREE.Group();
+    scene.add(guideLines);
+    function buildGuides() {
+      while (guideLines.children.length) {
+        const c = guideLines.children[0];
+        guideLines.remove(c); if (c.geometry) c.geometry.dispose();
+      }
+      if (!turntableGroup || !liftGroup) return;
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z;
+      const phiL = liftGroup.rotation.y;
+      const lux = Math.cos(phiL), luz = -Math.sin(phiL);   // lift long-axis direction (world x,z)
+      const LEN = 60, Y = 0.3;
+      const bar = (cx, cz, dirx, dirz, color) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(LEN, 0.05, 0.12),
+          new THREE.MeshBasicMaterial({ color, depthTest: false }));
+        m.position.set(cx, Y, cz);
+        m.rotation.y = -Math.atan2(dirz, dirx);
+        m.renderOrder = 6;
+        return m;
+      };
+      // orange: through the lift center, parallel to the lift
+      guideLines.add(bar(lx, lz, lux, luz, 0xff8c42));
+      // cyan: through the turntable center, parallel to the exit travel direction (toward the lift = west)
+      guideLines.add(bar(ttx, ttz, 1, 0, 0x7fd0ff));
+      // intersection: where the lift axis crosses the travel line (z = ttz)
+      const t = (ttz - lz) / (luz || 1e-9);
+      const ix = lx + lux * t;
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffee55, depthTest: false }));
+      dot.position.set(ix, Y, ttz); dot.renderOrder = 7;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 10, 30),
+        new THREE.MeshBasicMaterial({ color: 0xffee55, depthTest: false }));
+      ring.rotation.x = Math.PI / 2; ring.position.set(ix, Y, ttz); ring.renderOrder = 7;
+      guideLines.add(dot, ring);
+    }
+    buildGuides();
+
+    // ---------- HUD ----------
+    document.getElementById('dim').textContent = `${W.toFixed(1)}×${D.toFixed(1)} מ׳`;
+    document.getElementById('ntray').textContent = trayGroups.length;
+    document.getElementById('tPlan').onchange = e => { if (planMesh) planMesh.visible = e.target.checked; };
+    document.getElementById('tNums').onchange = e => {
+      numberLabels.forEach(l => l.visible = e.target.checked);
+      if (e1Group) e1Group.visible = e.target.checked;   // hide the E1 marker together with the numbers
+    };
+    document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
+    document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
+    function applyDark() {
+      const on = document.getElementById('tDark').checked;   // total darkness -> only fluorescents remain
+      hemi.intensity = on ? 0 : 0.16;
+      amb.intensity = on ? 0 : 0.06;
+      key.intensity = on ? 0 : 0.25;
+      // cars are also lit by their reflection (env) map, independent of scene lights -> kill it too
+      carGroup.traverse(o => { if (o.isMesh && o.material && o.material.envMap) o.material.envMapIntensity = on ? 0 : 0.8; });
+      scene.background.set(on ? 0x000000 : 0x0a0e1a);
+    }
+    document.getElementById('tDark').onchange = applyDark;
+    // fluorescents off: hiding the group also skips its child point lights during render
+    document.getElementById('tFluor').onchange = e => { fixtures.visible = e.target.checked; };
+    document.getElementById('tCeil').onchange = e => ceil.visible = e.target.checked;
+    function setCars(v) {
+      trayGroups.forEach(g => g.children.forEach(c => { if (c.userData.isCar) c.visible = v; }));
+      document.getElementById('tCars').checked = v;
+      const b = document.getElementById('hidecars');
+      if (b) b.textContent = v ? '🚗 הסתר רכבים' : '🚗 הצג רכבים';
+    }
+    document.getElementById('tCars').onchange = e => setCars(e.target.checked);
+    document.getElementById('hidecars').onclick = () => setCars(!document.getElementById('tCars').checked);
+    document.getElementById('tGrid').onchange = e => grid.visible = e.target.checked;
+
+    // apply the default view state (from the checkboxes above) on load
+    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tCars', 'tGrid', 'tDark', 'tFluor'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.onchange) el.onchange({ target: el });
+    });
+
+    // ============ TRAY MANIPULATION (select / drag XY / rotate) ============
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hitPt = new THREE.Vector3();
+    const grabOffset = new THREE.Vector3();
+    let selected = null, boxHelper = null, draggingTray = false;
+    let wallMode = false, wallStart = null, wallPreview = null;
+    let editMode = false;   // when false, the layout is locked (no move/rotate/delete/build)
+
+    function setNDC(ev) { ndc.x = (ev.clientX / innerWidth) * 2 - 1; ndc.y = -(ev.clientY / innerHeight) * 2 + 1; }
+    function groundHit(ev) {
+      setNDC(ev); raycaster.setFromCamera(ndc, camera);
+      return raycaster.ray.intersectPlane(groundPlane, hitPt) ? hitPt.clone() : null;
+    }
+    function clearPreview() { if (wallPreview) { scene.remove(wallPreview); wallPreview.geometry.dispose(); wallPreview = null; } }
+    function updatePreview(p) {
+      if (!wallStart) return;
+      if (!wallPreview) {
+        const geo = new THREE.BufferGeometry().setFromPoints([wallStart.clone(), p.clone()]);
+        wallPreview = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffcc55 }));
+        scene.add(wallPreview);
+      }
+      const pos = wallPreview.geometry.attributes.position;
+      pos.setXYZ(0, wallStart.x, 0.06, wallStart.z);
+      pos.setXYZ(1, p.x, 0.06, p.z);
+      pos.needsUpdate = true;
+    }
+    function setWallMode(on) {
+      wallMode = on; wallStart = null; clearPreview();
+      const b = document.getElementById('wall');
+      if (b) b.classList.toggle('active', on);
+      el.style.cursor = on ? 'crosshair' : '';
+      if (on) deselect();
+    }
+    function pickMovable(ev) {
+      setNDC(ev); raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(movables, true);
+      if (!hits.length) return null;
+      let o = hits[0].object;
+      while (o && movables.indexOf(o) === -1) o = o.parent;   // walk up to the registered movable
+      return o || null;
+    }
+    function selectTray(g) {
+      if (selected === g) return;
+      deselect();
+      selected = g;
+      boxHelper = new THREE.BoxHelper(g, 0x37f0a0);
+      scene.add(boxHelper);
+      updateSelInfo();
+    }
+    function deselect() {
+      if (boxHelper) { scene.remove(boxHelper); boxHelper.geometry.dispose(); boxHelper = null; }
+      selected = null; updateSelInfo();
+    }
+    function rotateSelected(deg) {
+      if (!selected) return;
+      if (!editMode) { flash('הפעל "עדכן" כדי לערוך'); return; }
+      selected.rotation.y += deg * Math.PI / 180;
+      if (boxHelper) boxHelper.update();
+      updateSelInfo();
+    }
+    function snap90() {
+      if (!selected) return;
+      if (!editMode) { flash('הפעל "עדכן" כדי לערוך'); return; }
+      const cur = -selected.rotation.y * 180 / Math.PI;
+      const tgt = Math.round((cur + 90) / 90) * 90;
+      selected.rotation.y = -tgt * Math.PI / 180;
+      if (boxHelper) boxHelper.update();
+      updateSelInfo();
+    }
+    function deleteSelected() {
+      if (!selected) return;
+      if (!editMode) { flash('הפעל "עדכן" כדי למחוק'); return; }
+      const g = selected;
+      deselect();
+      if (g.parent) g.parent.remove(g);
+      const mi = movables.indexOf(g); if (mi >= 0) movables.splice(mi, 1);
+      const ti = trayGroups.indexOf(g); if (ti >= 0) trayGroups.splice(ti, 1);
+      const wi = wallGroupsArr.indexOf(g); if (wi >= 0) wallGroupsArr.splice(wi, 1);
+      const fi = fixtureGroups.indexOf(g); if (fi >= 0) fixtureGroups.splice(fi, 1);
+      if (g === liftGroup) liftGroup = null;
+      if (g === turntableGroup) turntableGroup = null;
+      if (g === e1Group) e1Group = null;
+      g.traverse(o => {
+        if (o.userData && o.userData.isLabel) {                     // drop its number label
+          const li = numberLabels.indexOf(o); if (li >= 0) numberLabels.splice(li, 1);
+        }
+        if (o.userData && o.userData.isCenter) {                    // drop its center marker
+          const ci = centerMarkers.indexOf(o); if (ci >= 0) centerMarkers.splice(ci, 1);
+        }
+        // sprite + center-marker geometries are shared across objects -> do not dispose
+        if (o.geometry && !o.isSprite && !(o.userData && o.userData.isCenter)) o.geometry.dispose();
+      });
+      document.getElementById('ntray').textContent = trayGroups.length;
+    }
+    function updateSelInfo() {
+      const el2 = document.getElementById('selinfo');
+      if (!selected) { el2.textContent = 'לא נבחר'; return; }
+      const east = (selected.position.x + cx).toFixed(2);
+      const north = (cn - selected.position.z).toFixed(2);
+      const deg = (((-selected.rotation.y * 180 / Math.PI) % 360) + 360) % 360;
+      const label = selected.userData.isLift ? 'מעלית'
+        : selected.userData.isTurntable ? 'טרנטייבל'
+        : selected.userData.isEntry ? 'כניסה E1'
+        : selected.userData.isFixture ? 'פלורוסנט'
+        : selected.userData.isWall ? 'קיר'
+        : ('חניה #' + selected.userData.num);
+      el2.textContent = `${label} · E ${east} · N ${north} · ${deg.toFixed(0)}°`;
+    }
+    // ---- save / load / reset layout ----
+    function flash(msg) {
+      const el2 = document.getElementById('selinfo');
+      el2.textContent = msg;
+      clearTimeout(flash._t);
+      flash._t = setTimeout(updateSelInfo, 1600);
+    }
+    const asRec = g => ({
+      pos: [ +(g.position.x + cx).toFixed(3), +(cn - g.position.z).toFixed(3) ],
+      rot: +((((-g.rotation.y * 180 / Math.PI) % 360) + 360) % 360).toFixed(2)
+    });
+    function currentLayout() {
+      const data = { version: 1, trays: trayGroups.map(g => Object.assign(asRec(g), { num: g.userData.num })) };
+      if (liftGroup) data.lift = asRec(liftGroup);
+      if (turntableGroup) data.turntable = asRec(turntableGroup);
+      if (e1Group) data.e1 = [ +(e1Group.position.x + cx).toFixed(3), +(cn - e1Group.position.z).toFixed(3) ];
+      data.walls = wallGroupsArr.map(g => Object.assign(asRec(g), { len: g.userData.len }));
+      data.fixtures = fixtureGroups.map(asRec);
+      return data;
+    }
+    async function saveLayout() {
+      const data = currentLayout();
+      try {
+        const r = await fetch('/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data, null, 1)
+        });
+        if (!r.ok) throw new Error('server');
+        captureInitial();   // saved layout becomes the new "reset" baseline
+        flash(`נשמר לקובץ ✓ (${data.trays.length} משטחים)`);
+      } catch (e) {
+        // no write-server (plain http.server): fall back to browser storage
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        captureInitial();
+        flash('נשמר בדפדפן (הפעל serve.py לשמירה לקובץ)');
+      }
+    }
+    async function resetLayout() {
+      if (!confirm('לאפס לפריסת השרטוט המקורית? כל השינויים יימחקו.')) return;
+      localStorage.removeItem(SAVE_KEY);
+      try { await fetch('/reset', { method: 'POST' }); } catch (e) { /* ignore */ }
+      location.reload();
+    }
+    function topView() {
+      target.set(0, 0, 0);
+      phi = 0.05; theta = -Math.PI / 2;
+      radius = Math.max(W, D) * 1.25;
+      applyCam();
+    }
+    document.getElementById('save').onclick = saveLayout;
+    document.getElementById('reset').onclick = resetLayout;
+    document.getElementById('top').onclick = topView;
+    document.getElementById('wall').onclick = () => {
+      if (!editMode && !wallMode) { flash('הפעל "עדכן" כדי לבנות'); return; }
+      setWallMode(!wallMode);
+    };
+    function setEditMode(on) {
+      editMode = on;
+      const b = document.getElementById('edit');
+      b.classList.toggle('active', on);
+      b.textContent = on ? '🔓 עדכן' : '🔒 עדכן';
+      if (!on && wallMode) setWallMode(false);
+    }
+    document.getElementById('edit').onclick = () => setEditMode(!editMode);
+    setEditMode(false);   // start locked
+
+    document.getElementById('rotL').onclick = () => rotateSelected(-15);
+    document.getElementById('rotR').onclick = () => rotateSelected(15);
+    document.getElementById('rot90').onclick = () => snap90();
+    document.getElementById('del').onclick = () => deleteSelected();
+    addEventListener('keydown', e => {
+      if (e.key === 'Escape') { if (wallMode) setWallMode(false); else deselect(); return; }
+      if (!selected) return;
+      const step = e.shiftKey ? 45 : 5;
+      const k = e.key.toLowerCase();
+      if (k === 'q') rotateSelected(-step);
+      else if (k === 'e') rotateSelected(step);
+      else if (k === 'r') snap90();
+      else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); e.preventDefault(); }
+    });
+
+    // ---------- orbit controls (minimal) ----------
+    const target = new THREE.Vector3(0, 1, 0);
+    let radius = 34, theta = Math.PI * 0.85, phi = Math.PI * 0.32;
+    function applyCam() {
+      camera.position.set(
+        target.x + radius * Math.sin(phi) * Math.cos(theta),
+        target.y + radius * Math.cos(phi),
+        target.z + radius * Math.sin(phi) * Math.sin(theta));
+      camera.lookAt(target);
+    }
+    applyCam();
+    let drag = null, lastX = 0, lastY = 0;
+    const el = renderer.domElement;
+    el.addEventListener('mousedown', e => {
+      if (wallMode && e.button === 0) {
+        const p = groundHit(e);
+        if (p) {
+          if (!wallStart) { wallStart = p; }
+          else { addWallSeg(wallStart.x, wallStart.z, p.x, p.z); wallStart = null; clearPreview(); }
+        }
+        return;
+      }
+      if (e.button === 0) {
+        const g = pickMovable(e);
+        if (g) {
+          selectTray(g);
+          if (editMode) {                     // dragging only when unlocked
+            draggingTray = true;
+            setNDC(e); raycaster.setFromCamera(ndc, camera);
+            raycaster.ray.intersectPlane(groundPlane, hitPt);
+            grabOffset.set(g.position.x - hitPt.x, 0, g.position.z - hitPt.z);
+          }
+          drag = null;
+          return;
+        }
+        deselect();
+      }
+      drag = e.button; lastX = e.clientX; lastY = e.clientY;
+    });
+    addEventListener('mouseup', () => { drag = null; draggingTray = false; });
+    addEventListener('mousemove', e => {
+      if (wallMode && wallStart) { const p = groundHit(e); if (p) updatePreview(p); return; }
+      if (draggingTray && selected) {
+        setNDC(e); raycaster.setFromCamera(ndc, camera);
+        if (raycaster.ray.intersectPlane(groundPlane, hitPt)) {
+          selected.position.x = hitPt.x + grabOffset.x;
+          selected.position.z = hitPt.z + grabOffset.z;
+          if (boxHelper) boxHelper.update();
+          updateSelInfo();
+        }
+        return;
+      }
+      if (drag === null) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY;
+      if (drag === 0) { theta -= dx * 0.006; phi = Math.max(0.08, Math.min(Math.PI / 2 - 0.02, phi - dy * 0.006)); }
+      else if (drag === 2) {
+        const right = new THREE.Vector3(Math.sin(theta), 0, -Math.cos(theta));
+        const fwd = new THREE.Vector3(-Math.cos(theta), 0, -Math.sin(theta));
+        target.addScaledVector(right, -dx * radius * 0.0012);
+        target.addScaledVector(fwd, -dy * radius * 0.0012);
+      }
+      applyCam();
+    });
+    el.addEventListener('contextmenu', e => e.preventDefault());
+    el.addEventListener('wheel', e => { radius = Math.max(8, Math.min(120, radius * (1 + e.deltaY * 0.001))); applyCam(); e.preventDefault(); }, { passive: false });
+
+    // ---------- compass ----------
+    const cc = document.getElementById('compass').getContext('2d');
+    function drawCompass() {
+      cc.clearRect(0, 0, 84, 84);
+      cc.save(); cc.translate(42, 46);
+      cc.rotate(theta + Math.PI / 2);
+      cc.strokeStyle = '#7fd0ff'; cc.fillStyle = '#e0a458'; cc.lineWidth = 2;
+      cc.beginPath(); cc.moveTo(0, -26); cc.lineTo(6, 8); cc.lineTo(0, 2); cc.lineTo(-6, 8); cc.closePath(); cc.fill();
+      cc.restore();
+      cc.fillStyle = '#dbe6ff'; cc.font = 'bold 12px Arial'; cc.textAlign = 'center';
+      cc.fillText('N', 42, 16);
+    }
+
+    // ============ SCENARIO ENGINE (task queue of tray moves / spins / turns) ============
+    let anim = null, taskQueue = [];
+    // snapshot of every movable's transform -> "reset simulation" restores it.
+    // re-captured on Save so reset returns to the last-saved arrangement (not page-load).
+    let initialState = [];
+    function captureInitial() {
+      initialState = movables.map(g => ({ g, x: g.position.x, y: g.position.y, z: g.position.z, ry: g.rotation.y }));
+    }
+    captureInitial();
+    function resetSim() {
+      anim = null; taskQueue = [];
+      initialState.forEach(s => {
+        if (!s.g.parent) return;               // was deleted -> skip
+        s.g.position.x = s.x; s.g.position.y = s.y; s.g.position.z = s.z; s.g.rotation.y = s.ry;
+      });
+      if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;   // lift platform back down
+      if (boxHelper) boxHelper.update();
+      updateSelInfo();
+      flash('הסימולציה אותחלה ↺');
+    }
+    const easeInOut = k => k * k * (3 - 2 * k);
+    // live timing config (edited from the ⚙ settings panel)
+    const CFG = { travel: 2.5, spin: 120, lift: 1.0 };   // m/s, deg/s, m/s
+    const dur = d => Math.max(0.2, d / CFG.travel);
+    const spinDur = deg => Math.max(0.2, Math.abs(deg) / CFG.spin);
+
+    function runTasks(tasks) {
+      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return false; }
+      taskQueue = tasks.slice();
+      startNextTask();
+      return true;
+    }
+    function startNextTask() {
+      if (taskQueue.length === 0) { anim = null; flash('הדמיה הסתיימה ✓'); return; }
+      const tk = taskQueue.shift();
+      anim = { tray: tk.tray, steps: tk.steps, i: 0, t: 0, end: tk.end,
+               from: { x: tk.tray.position.x, z: tk.tray.position.z, ry: tk.tray.rotation.y, y: tk.tray.position.y } };
+    }
+    function advanceAnim(dt) {
+      const s = anim.steps[anim.i];
+      anim.t += dt;
+      const k = Math.min(1, anim.t / s.dur), e = easeInOut(k);
+      const tr = anim.tray;
+      if (s.type === 'move') {
+        tr.position.x = anim.from.x + (s.to.x - anim.from.x) * e;
+        tr.position.z = anim.from.z + (s.to.z - anim.from.z) * e;
+      } else if (s.type === 'spin') {
+        tr.rotation.y = anim.from.ry - s.turns * 2 * Math.PI * e;
+      } else if (s.type === 'turn') {
+        tr.rotation.y = anim.from.ry + (s.to - anim.from.ry) * e;
+      } else if (s.type === 'liftup') {
+        tr.position.y = anim.from.y + (s.to - anim.from.y) * e;      // car rises with the platform
+        if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + tr.position.y;   // posts stay fixed
+      }
+      if (k >= 1) {
+        anim.i++;
+        if (anim.i >= anim.steps.length) {
+          tr.position.x = anim.end.x; tr.position.z = anim.end.z; tr.rotation.y = anim.end.ry;
+          if (anim.end.y !== undefined) { tr.position.y = anim.end.y; if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + anim.end.y; }
+          startNextTask(); return;
+        }
+        anim.t = 0;
+        anim.from = { x: tr.position.x, z: tr.position.z, ry: tr.rotation.y, y: tr.position.y };
+      }
+    }
+
+    // ---- simple single-car demo (aisle / spin-return) ----
+    function playCar(num) {
+      const tray = trayGroups.find(g => g.userData.isTray && g.userData.num === num);
+      if (!tray) { flash('לא נמצא משטח #' + num); return; }
+      if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
+      const home = { x: tray.position.x, z: tray.position.z, ry: tray.rotation.y };
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const e1x = e1Group ? e1Group.position.x : ttx;
+      const align = { x: e1x, z: home.z };
+      const dAlign = Math.abs(home.x - e1x), dEnter = Math.hypot(e1x - ttx, home.z - ttz);
+      const steps = [
+        { type: 'move', to: align, dur: dur(dAlign) },
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(dEnter) },
+        { type: 'spin', turns: 1, dur: spinDur(360) },
+        { type: 'move', to: align, dur: dur(dEnter) },
+        { type: 'move', to: { x: home.x, z: home.z }, dur: dur(dAlign) },
+      ];
+      runTasks([{ tray, steps, end: { x: home.x, z: home.z, ry: home.ry } }]);
+      flash('מדמה משטח #' + num + '…');
+    }
+
+    // ============ BLOCK-1 model (rotated 3×4 grid) + 15-puzzle extraction ============
+    const BLOCK1 = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22]);
+    const COL_SP = 5.33, ROW_SP = 2.27;
+
+    function blockModel() {
+      const items = trayGroups.filter(g => BLOCK1.has(g.userData.num));
+      const c5 = items.find(g => g.userData.num === 5);
+      if (!c5 || items.length < 3) return null;
+      const f = c5.rotation.y;
+      const aU = { x: Math.cos(f), z: -Math.sin(f) };   // grid column axis (world)
+      const aV = { x: Math.sin(f), z: Math.cos(f) };    // grid row axis (world)
+      const ref = { x: c5.position.x, z: c5.position.z };
+      const info = items.map(g => {
+        const dx = g.position.x - ref.x, dz = g.position.z - ref.z;
+        return { g, num: g.userData.num,
+                 col: Math.round((dx * aU.x + dz * aU.z) / COL_SP),
+                 row: Math.round((dx * aV.x + dz * aV.z) / ROW_SP) };
+      });
+      const minC = Math.min(...info.map(i => i.col)), minR = Math.min(...info.map(i => i.row));
+      info.forEach(i => { i.col -= minC; i.row -= minR; });
+      const key = (c, r) => c + ',' + r;
+      const c5i = info.find(i => i.num === 5);
+      const cellWorld = {}, numByCell = {}, carByNum = {}, cellByNum = {};
+      info.forEach(i => {
+        const kk = key(i.col, i.row);
+        numByCell[kk] = i.num; carByNum[i.num] = i.g; cellByNum[i.num] = kk;
+        cellWorld[kk] = {
+          x: ref.x + (i.col - c5i.col) * COL_SP * aU.x + (i.row - c5i.row) * ROW_SP * aV.x,
+          z: ref.z + (i.col - c5i.col) * COL_SP * aU.z + (i.row - c5i.row) * ROW_SP * aV.z
+        };
+      });
+      const cells = info.map(i => key(i.col, i.row));
+      const cellSet = new Set(cells);
+      const neighbors = kk => {
+        const [c, r] = kk.split(',').map(Number);
+        return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]]
+          .map(([a, b]) => key(a, b)).filter(n => cellSet.has(n));
+      };
+      return { info, key, cells, cellWorld, numByCell, carByNum, cellByNum, neighbors, gateway: cellByNum[5] };
+    }
+
+    // A* : slide tiles so that car T reaches the gateway cell (blank starts at gateway)
+    // generic sliding-puzzle A* : slide tiles so car T reaches `goal`. Supports 1+ blank cells.
+    function solvePuzzle(startBoard, cells, neighbors, goal, T) {
+      const [gc, gr] = goal.split(',').map(Number);
+      const enc = b => cells.map(k => b[k]).join('.');
+      const cellOfT = b => cells.find(k => b[k] === T);
+      const h = b => { const [c, r] = cellOfT(b).split(',').map(Number); return Math.abs(c - gc) + Math.abs(r - gr); };
+      const start = {}; cells.forEach(k => start[k] = startBoard[k]);
+      const sKey = enc(start);
+      const open = [{ b: start, g: 0, f: h(start), key: sKey }];
+      const came = new Map(), gscore = new Map([[sKey, 0]]), closed = new Set();
+      let nodes = 0;
+      while (open.length) {
+        let bi = 0; for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
+        const cur = open.splice(bi, 1)[0];
+        if (closed.has(cur.key)) continue;
+        closed.add(cur.key);
+        if (cur.b[goal] === T) {
+          const moves = []; let k = cur.key;
+          while (came.has(k)) { const c = came.get(k); moves.unshift(c.move); k = c.pkey; }
+          return moves;
+        }
+        if (++nodes > 300000) return null;
+        for (const blank of cells) {
+          if (cur.b[blank] !== 0) continue;
+          for (const nb of neighbors(blank)) {
+            const car = cur.b[nb];
+            if (car === 0) continue;
+            const nboard = Object.assign({}, cur.b);
+            nboard[blank] = car; nboard[nb] = 0;      // car slides nb -> blank
+            const nkey = enc(nboard);
+            if (closed.has(nkey)) continue;
+            const ng = cur.g + 1;
+            if (!gscore.has(nkey) || ng < gscore.get(nkey)) {
+              gscore.set(nkey, ng);
+              came.set(nkey, { pkey: cur.key, move: { car, from: nb, to: blank } });
+              open.push({ b: nboard, g: ng, f: ng + h(nboard), key: nkey });
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    // ---- shared exit maneuvers (used by both blocks) ----
+    // drive to turntable, slight align, park at E1 (frees a gateway)
+    function outToE1(g) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const e1x = e1Group ? e1Group.position.x : ttx, e1z = e1Group ? e1Group.position.z : pz(7.9);
+      const cur = (((-g.rotation.y * 180 / Math.PI) % 360) + 360) % 360;
+      const snap = Math.round(cur / 90) * 90, ry = -snap * Math.PI / 180, p = g.position;
+      return { tray: g, end: { x: e1x, z: e1z, ry },
+        steps: [ { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(p.x - ttx, p.z - ttz)) },
+                 { type: 'turn', to: ry, dur: spinDur(Math.abs(snap - cur)) },
+                 { type: 'move', to: { x: e1x, z: e1z }, dur: dur(Math.hypot(ttx - e1x, ttz - e1z)) } ] };
+    }
+    // full exit: -> turntable -> align to lift -> along the lift axis into the lift -> lift rises
+    function fullExit(g) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup ? liftGroup.position.x : ttx;
+      const lz = liftGroup ? liftGroup.position.z : ttz;
+      const lry = liftGroup ? liftGroup.rotation.y : 0;
+      const p = g.position, from = g.rotation.y;
+      const alignTo = from + Math.atan2(Math.sin(lry - from), Math.cos(lry - from));
+      const turnDeg = Math.abs(alignTo - from) * 180 / Math.PI;
+      const lux = Math.cos(lry), luz = -Math.sin(lry);
+      const t = (ttz - lz) / (luz || 1e-9);
+      const ix = lx + lux * t;
+      return { tray: g, end: { x: lx, z: lz, ry: alignTo, y: H },
+        steps: [
+          { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(p.x - ttx, p.z - ttz)) },
+          { type: 'turn', to: alignTo, dur: spinDur(turnDeg) },
+          { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },
+          { type: 'move', to: { x: lx, z: lz }, dur: dur(Math.hypot(ix - lx, ttz - lz)) },
+          { type: 'liftup', to: H, dur: Math.max(0.4, H / CFG.lift) },
+        ] };
+    }
+    const moveTask = (g, wx, wz, ry) => ({ tray: g, end: { x: wx, z: wz, ry: (ry != null ? ry : g.rotation.y) },
+      steps: [{ type: 'move', to: { x: wx, z: wz }, dur: dur(Math.hypot(g.position.x - wx, g.position.z - wz)) }] });
+
+    function extractFromBlock1(T) {
+      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
+      const M = blockModel();
+      if (!M) { flash('בלוק 1 לא זוהה'); return; }
+      if (!M.carByNum[T]) { flash('רכב ' + T + ' לא בבלוק 1'); return; }
+      const tasks = [];
+      if (T === 5) { runTasks([fullExit(M.carByNum[5])]); flash('חילוץ רכב 5'); return; }
+      tasks.push(outToE1(M.carByNum[5]));                 // free the gateway
+      const board = {};
+      M.cells.forEach(k => board[k] = M.numByCell[k]);
+      board[M.gateway] = 0;
+      const sol = solvePuzzle(board, M.cells, M.neighbors, M.gateway, T);
+      if (!sol) { flash('לא נמצא פתרון חילוץ'); return; }
+      sol.forEach(mv => { const b = M.cellWorld[mv.to]; tasks.push(moveTask(M.carByNum[mv.car], b.x, b.z)); });
+      tasks.push(fullExit(M.carByNum[T]));                // target -> exit through the lift
+      runTasks(tasks);
+      flash('חילוץ רכב ' + T + ' — ' + sol.length + ' הזזות');
+    }
+
+    // ============ BLOCK 2 (south 3×3 grid + aisle row) extraction ============
+    const BLOCK2 = new Set([12, 13, 14, 15, 16, 17, 18, 19, 20]);   // targets (car 21 = helper)
+    function block2Model() {
+      const tray = n => trayGroups.find(g => g.userData.num === n);
+      const need = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+      if (need.some(n => !tray(n))) return null;
+      const key = (c, r) => c + ',' + r;
+      // cols(east) x rows(north): rows 0-2 = the parked cars, row 3 = the aisle (exit lane)
+      const numByCell = { '0,0': 18, '0,1': 19, '0,2': 20, '1,0': 12, '1,1': 13, '1,2': 14, '2,0': 15, '2,1': 16, '2,2': 17 };
+      const cellWorld = {};
+      Object.keys(numByCell).forEach(k => { const g = tray(numByCell[k]); cellWorld[k] = { x: g.position.x, z: g.position.z }; });
+      // aisle row (r=3): same column x, north = 7.9
+      const aisleZ = pz(7.9);
+      [0, 1, 2].forEach(c => { cellWorld[key(c, 3)] = { x: cellWorld[key(c, 2)].x, z: aisleZ }; });
+      // puzzle cells: the 9 parked cells + aisle A0(0,3) & A2(2,3). A1(1,3) is blocked by car 21.
+      const cells = ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2', '0,3', '2,3'];
+      const cellSet = new Set(cells);
+      const neighbors = kk => {
+        const [c, r] = kk.split(',').map(Number);
+        return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => key(a, b)).filter(n => cellSet.has(n));
+      };
+      return { tray, numByCell, cellWorld, cells, neighbors, A0: '0,3', A1: '1,3' };
+    }
+
+    function extractFromBlock2(T) {
+      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
+      const M = block2Model();
+      if (!M) { flash('בלוק 2 לא זוהה'); return; }
+      if (!Object.values(M.numByCell).includes(T)) { flash('רכב ' + T + ' לא בבלוק 2'); return; }
+      const c21 = M.tray(21);
+      const orig21 = { x: c21.position.x, z: c21.position.z, ry: c21.rotation.y };
+      const a1 = M.cellWorld[M.A1], a0 = M.cellWorld[M.A0];
+      const tasks = [];
+      // 1) car 21 -> in front of car 14 (A1) : opens the aisle blank A0 near E1
+      tasks.push(moveTask(c21, a1.x, a1.z));
+      // 2) 15-puzzle: bring T to A0 (the empty aisle spot near E1)
+      const board = {}; M.cells.forEach(k => board[k] = M.numByCell[k] || 0);
+      const sol = solvePuzzle(board, M.cells, M.neighbors, M.A0, T);
+      if (!sol) { flash('לא נמצא פתרון בלוק 2'); return; }
+      sol.forEach(mv => {
+        const g = M.tray(mv.car), a = M.cellWorld[mv.from], b = M.cellWorld[mv.to];
+        tasks.push({ tray: g, end: { x: b.x, z: b.z, ry: g.rotation.y },
+          steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] });
+      });
+      // 3) target now at A0 -> exit through E1 / turntable / lift
+      tasks.push(fullExit(M.tray(T)));
+      // 4) car 21 returns to its original spot
+      tasks.push(moveTask(c21, orig21.x, orig21.z, orig21.ry));
+      runTasks(tasks);
+      flash('חילוץ רכב ' + T + ' מבלוק 2 — ' + sol.length + ' הזזות');
+    }
+
+    function runScenario(num) {
+      if (isNaN(num)) { flash('מספר רכב לא תקין'); return; }
+      if (anim || taskQueue.length) { flash('הדמיה כבר רצה'); return; }
+      if (BLOCK1.has(num)) extractFromBlock1(num);
+      else if (BLOCK2.has(num)) extractFromBlock2(num);
+      else playCar(num);
+    }
+    function playScenario() {
+      let num;
+      if (selected && selected.userData.isTray) num = selected.userData.num;
+      else {
+        const s = prompt('איזה רכב לחלץ? בלוק 1: 2–11,22 · בלוק 2: 12–20', '13');
+        if (s == null) return;
+        num = parseInt(s, 10);
+      }
+      runScenario(num);
+    }
+    document.getElementById('play').onclick = playScenario;
+    document.getElementById('resetsim').onclick = resetSim;
+
+    // ---- ⚙ settings panel wiring ----
+    const cfgTravel = document.getElementById('cfgTravel');
+    const cfgSpin = document.getElementById('cfgSpin');
+    const cfgLift = document.getElementById('cfgLift');
+    function readCfg() {
+      CFG.travel = Math.max(0.1, parseFloat(cfgTravel.value) || 2.5);
+      CFG.spin = Math.max(1, parseFloat(cfgSpin.value) || 120);
+      CFG.lift = Math.max(0.1, parseFloat(cfgLift.value) || 1.0);
+    }
+    [cfgTravel, cfgSpin, cfgLift].forEach(el => el.addEventListener('change', readCfg));
+    readCfg();
+    document.getElementById('runExtract').onclick = () =>
+      runScenario(parseInt(document.getElementById('cfgCar').value, 10));
+
+    // ---------- loop ----------
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+    let lastT = 0;
+    function animate(t) {
+      requestAnimationFrame(animate);
+      if (t === undefined) t = lastT;
+      const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
+      lastT = t;
+      if (anim) advanceAnim(dt);
+      if (boxHelper) boxHelper.update();
+      drawCompass();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  })();
+  </script>
+</body>
+</html>
