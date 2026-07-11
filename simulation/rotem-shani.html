@@ -106,7 +106,7 @@
     <label>מהירות נסיעה <span class="u">מ׳/ש'</span><input type="number" id="cfgTravel" value="2.5" step="0.5" min="0.5"></label>
     <label>סיבוב צלחת <span class="u">°/ש'</span><input type="number" id="cfgSpin" value="120" step="10" min="10"></label>
     <label>מהירות מעלית <span class="u">מ׳/ש'</span><input type="number" id="cfgLift" value="1.0" step="0.5" min="0.1"></label>
-    <label>זמן השהיה בין תנועת משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="1" step="0.1" min="0"></label>
+    <label>זמן השהיה בין תנועת משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="0.5" step="0.1" min="0"></label>
     <div class="divider"></div>
     <label>מספר רכב להוצאה <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
     <button id="runExtract">▶ הפעל חילוץ</button>
@@ -1163,7 +1163,7 @@
     }
     const easeInOut = k => k * k * (3 - 2 * k);
     // live timing config (edited from the ⚙ settings panel)
-    const CFG = { travel: 2.5, spin: 120, lift: 1.0, gap: 1 };   // m/s, deg/s, m/s, and convoy stagger gap(s)
+    const CFG = { travel: 2.5, spin: 120, lift: 1.0, gap: 0.5 };   // m/s, deg/s, m/s, and convoy stagger gap(s)
     const dur = d => Math.max(0.2, d / CFG.travel);
     const spinDur = deg => Math.max(0.2, Math.abs(deg) / CFG.spin);
 
@@ -1731,7 +1731,7 @@
       CFG.travel = Math.max(0.1, parseFloat(cfgTravel.value) || 2.5);
       CFG.spin = Math.max(1, parseFloat(cfgSpin.value) || 120);
       CFG.lift = Math.max(0.1, parseFloat(cfgLift.value) || 1.0);
-      { const v = parseFloat(cfgGap.value); CFG.gap = isNaN(v) ? 1 : Math.max(0, v); }
+      { const v = parseFloat(cfgGap.value); CFG.gap = isNaN(v) ? 0.5 : Math.max(0, v); }
     }
     [cfgTravel, cfgSpin, cfgLift, cfgGap].forEach(el => el.addEventListener('change', readCfg));
     readCfg();
