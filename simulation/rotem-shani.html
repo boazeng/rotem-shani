@@ -1122,20 +1122,20 @@
     const isEmptySpot = tg => !!(tg && tg.userData.empty);
     function delay(sec, fn) { pending.push({ t: sec, fn }); }        // scenario-clock delay (honours pause/reset)
     // snap every tray to a clean resting spot; hidden cars stay hidden (occupancy preserved).
-    // block-2 trays snap to their NEAREST grid anchor (front-packing may have relocated them permanently);
+    // block trays snap to their NEAREST grid anchor (front-packing may have relocated them permanently);
     // all other trays snap to their saved canonical home.
+    const snapToAnchors = (g, y, ry, anchors, keys) => {
+      let best = null, bd = Infinity;
+      keys.forEach(k => { const d = Math.hypot(g.position.x - anchors[k].x, g.position.z - anchors[k].z); if (d < bd) { bd = d; best = k; } });
+      g.position.set(anchors[best].x, y, anchors[best].z); g.rotation.y = ry;
+    };
     function settleClean() {
-      const anchors = B2ANCHORS;   // block-2 trays are nums 12-21 (BLOCK2 is 12-20; 21 is the helper)
       initialState.forEach(s => {
         if (!s.g || !s.g.userData || !s.g.userData.isTray) return;
-        const num = s.g.userData.num;
-        if (anchors && num >= 12 && num <= 21) {
-          let best = null, bd = Infinity;
-          B2CELLS.forEach(k => { const d = Math.hypot(s.g.position.x - anchors[k].x, s.g.position.z - anchors[k].z); if (d < bd) { bd = d; best = k; } });
-          s.g.position.set(anchors[best].x, s.y, anchors[best].z); s.g.rotation.y = s.ry;
-        } else {
-          s.g.position.set(s.x, s.y, s.z); s.g.rotation.y = s.ry;
-        }
+        const num = s.g.userData.num;                                     // BLOCK2 trays 12-21, BLOCK1 trays 2-11,22
+        if (B2ANCHORS && num >= 12 && num <= 21) snapToAnchors(s.g, s.y, s.ry, B2ANCHORS, B2CELLS);
+        else if (B1ANCHORS && BLOCK1.has(num)) snapToAnchors(s.g, s.y, s.ry, B1ANCHORS, Object.keys(B1ANCHORS));
+        else { s.g.position.set(s.x, s.y, s.z); s.g.rotation.y = s.ry; }
       });
       if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;
       if (boxHelper) boxHelper.update();
@@ -1250,41 +1250,46 @@
     const BLOCK1 = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22]);
     const COL_SP = 5.33, ROW_SP = 2.27;
 
-    function blockModel() {
+    // fixed cell anchors (captured once from the canonical layout), gateway (car 5's cell = the single exit),
+    // and PARK order by BFS distance from the gateway (front = near the gateway/turntable).
+    let B1ANCHORS = null, B1PARK = null, B1GATEWAY = null;
+    const b1key = (c, r) => c + ',' + r;
+    function ensureB1Anchors() {
+      if (B1ANCHORS) return true;
       const items = trayGroups.filter(g => BLOCK1.has(g.userData.num));
       const c5 = items.find(g => g.userData.num === 5);
-      if (!c5 || items.length < 3) return null;
+      if (!c5 || items.length < 11) return false;   // capture only from the full canonical block
       const f = c5.rotation.y;
-      const aU = { x: Math.cos(f), z: -Math.sin(f) };   // grid column axis (world)
-      const aV = { x: Math.sin(f), z: Math.cos(f) };    // grid row axis (world)
+      const aU = { x: Math.cos(f), z: -Math.sin(f) }, aV = { x: Math.sin(f), z: Math.cos(f) };
       const ref = { x: c5.position.x, z: c5.position.z };
-      const info = items.map(g => {
-        const dx = g.position.x - ref.x, dz = g.position.z - ref.z;
-        return { g, num: g.userData.num,
-                 col: Math.round((dx * aU.x + dz * aU.z) / COL_SP),
-                 row: Math.round((dx * aV.x + dz * aV.z) / ROW_SP) };
-      });
+      const info = items.map(g => { const dx = g.position.x - ref.x, dz = g.position.z - ref.z;
+        return { num: g.userData.num, col: Math.round((dx * aU.x + dz * aU.z) / COL_SP), row: Math.round((dx * aV.x + dz * aV.z) / ROW_SP) }; });
       const minC = Math.min(...info.map(i => i.col)), minR = Math.min(...info.map(i => i.row));
       info.forEach(i => { i.col -= minC; i.row -= minR; });
-      const key = (c, r) => c + ',' + r;
       const c5i = info.find(i => i.num === 5);
-      const cellWorld = {}, numByCell = {}, carByNum = {}, cellByNum = {};
-      info.forEach(i => {
-        const kk = key(i.col, i.row);
-        numByCell[kk] = i.num; carByNum[i.num] = i.g; cellByNum[i.num] = kk;
-        cellWorld[kk] = {
-          x: ref.x + (i.col - c5i.col) * COL_SP * aU.x + (i.row - c5i.row) * ROW_SP * aV.x,
-          z: ref.z + (i.col - c5i.col) * COL_SP * aU.z + (i.row - c5i.row) * ROW_SP * aV.z
-        };
-      });
-      const cells = info.map(i => key(i.col, i.row));
+      const cellWorld = {};
+      info.forEach(i => { cellWorld[b1key(i.col, i.row)] = {
+        x: ref.x + (i.col - c5i.col) * COL_SP * aU.x + (i.row - c5i.row) * ROW_SP * aV.x,
+        z: ref.z + (i.col - c5i.col) * COL_SP * aU.z + (i.row - c5i.row) * ROW_SP * aV.z }; });
+      B1ANCHORS = cellWorld; B1GATEWAY = b1key(c5i.col, c5i.row);
+      const cellSet = new Set(Object.keys(cellWorld));
+      const nb = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(x => cellSet.has(x)); };
+      const dist = { [B1GATEWAY]: 0 }, q = [B1GATEWAY];
+      while (q.length) { const u = q.shift(); nb(u).forEach(v => { if (dist[v] === undefined) { dist[v] = dist[u] + 1; q.push(v); } }); }
+      B1PARK = Object.keys(cellWorld).filter(k => k !== B1GATEWAY).sort((a, b) => dist[a] - dist[b] || (a < b ? -1 : 1));
+      return true;
+    }
+    function blockModel() {
+      if (!ensureB1Anchors()) return null;
+      const tray = n => trayGroups.find(g => g.userData.num === n);
+      const cellWorld = B1ANCHORS, cells = Object.keys(cellWorld);
+      const numByCell = {}, carByNum = {}, cellByNum = {};
+      BLOCK1.forEach(n => { const g = tray(n); if (!g) return; let best = null, bd = Infinity;
+        cells.forEach(k => { const d = Math.hypot(g.position.x - cellWorld[k].x, g.position.z - cellWorld[k].z); if (d < bd) { bd = d; best = k; } });
+        numByCell[best] = n; carByNum[n] = g; cellByNum[n] = best; });
       const cellSet = new Set(cells);
-      const neighbors = kk => {
-        const [c, r] = kk.split(',').map(Number);
-        return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]]
-          .map(([a, b]) => key(a, b)).filter(n => cellSet.has(n));
-      };
-      return { info, key, cells, cellWorld, numByCell, carByNum, cellByNum, neighbors, gateway: cellByNum[5] };
+      const neighbors = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(n => cellSet.has(n)); };
+      return { tray, key: b1key, cells, cellWorld, numByCell, carByNum, cellByNum, neighbors, gateway: B1GATEWAY, park: B1PARK };
     }
 
     // A* : slide tiles so that car T reaches the gateway cell (blank starts at gateway)
@@ -1487,6 +1492,43 @@
       });
     }
 
+    // BLOCK-1 exit with front-packing. Block 1 is a single-gateway packed grid (car 5 holds the gateway and
+    // steps out to E1 to free it). After the car vanishes, the remaining cars pack DEEP (far from the gateway)
+    // and the freed EMPTY tray drives back in through the gateway to the front-most cell; car 5 then returns.
+    // If the re-pack can't be solved, we safely fall back to snapping the clean canonical grid.
+    function scheduleExit1(tgT, T) {
+      return () => delay(3, () => {
+        const c = trayCar(tgT); if (c) c.visible = false;
+        tgT.userData.empty = true;
+        const M = blockModel();
+        if (!M) { settleClean(); flash('רכב ' + T + ' יצא מהמתקן ✓'); return; }
+        const cells = M.cells, gw = M.gateway, park = M.park, g5 = M.tray(5);
+        // board with T (at the lift) AND car 5 (out at E1) absent: match the other 9 trays to nearest anchors
+        const board = {}; cells.forEach(k => board[k] = 0);
+        BLOCK1.forEach(n => { if (n === T || n === 5) return; const g = M.tray(n); let best = null, bd = Infinity;
+          cells.forEach(k => { const d = Math.hypot(g.position.x - M.cellWorld[k].x, g.position.z - M.cellWorld[k].z); if (d < bd) { bd = d; best = k; } });
+          board[best] = n; });
+        // global front-pack: gateway reserved (car 5 returns there), park[0] reserved (returning empty T),
+        // present empties fill the next front cells, cars fill the back cells.
+        const present = park.map(k => board[k]).filter(v => v !== 0);
+        const emp = present.filter(n => isEmptySpot(M.tray(n))), cars = present.filter(n => !isEmptySpot(M.tray(n)));
+        const Tfront = park[0];
+        const target = {}; cells.forEach(k => target[k] = 0);
+        const slots = park.slice(1);
+        emp.concat(cars).forEach((n, i) => target[slots[i]] = n);
+        const repack = solveToBoard(board, cells, M.neighbors, target);
+        if (!repack) { settleClean(); flash('רכב ' + T + ' יצא מהמתקן ✓'); return; }   // safe fallback
+        const tasks = movesToTasks(M, repack);
+        tasks.push(intakeDrive1(tgT, M.cellWorld[gw], homeRy(tgT)));   // empty tray back down through the gateway
+        const retStart = Object.assign({}, target); retStart[gw] = T;
+        const retSol = solvePuzzle(retStart, cells, M.neighbors, Tfront, T);
+        (retSol ? movesToTasks(M, retSol) : [movesToTasks(M, [{ car: T, from: gw, to: Tfront }])[0]]).forEach(t => tasks.push(t));
+        tasks.push(moveTask(g5, M.cellWorld[gw].x, M.cellWorld[gw].z, homeRy(g5)));   // car 5 returns to the gateway
+        tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + T + ' יצא — הרכבים נדחסו, מגש ריק בחזית ✓'); };
+        if (!runTasks(tasks)) { settleClean(); }
+      });
+    }
+
     function extractFromBlock1(T) {
       if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
@@ -1501,13 +1543,8 @@
       board[M.gateway] = 0;
       const sol = solvePuzzle(board, M.cells, M.neighbors, M.gateway, T);
       if (!sol) { flash('לא נמצא פתרון חילוץ'); return; }
-      sol.forEach(mv => {
-        const a = M.cellWorld[mv.from], b = M.cellWorld[mv.to];
-        const dx = b.x - a.x, dz = b.z - a.z, dm = Math.hypot(dx, dz) || 1;
-        const t = moveTask(M.carByNum[mv.car], b.x, b.z); t.dir = { x: dx / dm, z: dz / dm };
-        tasks.push(t);
-      });
-      { const ex = fullExit(M.carByNum[T]); ex.onDone = scheduleExit(M.carByNum[T], T); tasks.push(ex); }  // target -> exit
+      movesToTasks(M, sol).forEach(t => tasks.push(t));   // sequential slides (no stranding)
+      { const ex = fullExit(M.carByNum[T]); ex.onDone = scheduleExit1(M.carByNum[T], T); tasks.push(ex); }  // target -> exit
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' — ' + sol.length + ' הזזות');
     }
@@ -1658,22 +1695,32 @@
       const M = blockModel(); if (!M) { flash('בלוק 1 לא זוהה'); return; }
       const tgN = M.carByNum[N]; if (!tgN) { flash('רכב ' + N + ' לא בבלוק 1'); return; }
       if (!isEmptySpot(tgN)) { flash('משבצת ' + N + ' תפוסה'); return; }
-      const gw = M.cellWorld[M.gateway];
-      if (N === 5) {   // the gateway itself: rise empty on the lift, board, then drive in
-        const d = intakeDrive1(tgN, gw, homeRy(tgN)); d.onDone = () => { settleClean(); flash('רכב 5 נקלט ✓'); };
-        runTasks([...intakePrelude(tgN, false), d]); flash('קליטת רכב 5'); return;
+      if (N === 5) {   // car 5 IS the gateway: rise empty right there, board, drive back down onto it
+        const car = trayCar(tgN); if (car) car.visible = false;
+        const up = fullExit(tgN, false); up.onDone = () => { if (car) car.visible = true; tgN.userData.empty = false; };
+        const d = intakeDrive1(tgN, M.cellWorld[M.gateway], homeRy(tgN)); d.onDone = () => { settleClean(); flash('רכב 5 נקלט ✓'); };
+        runTasks([up, d]); flash('קליטת רכב 5'); return;
       }
+      // like block 2: the empty tray slides to the gateway (car 5 steps out to E1 to free it), rises empty, the
+      // car boards, then it descends back through the gateway; the route is REVERSED to restore the grid, and
+      // car 5 returns to the gateway.
       const cellN = M.cellByNum[N];
-      const board = {};
-      M.cells.forEach(k => { const num = M.numByCell[k]; board[k] = (num && !isEmptySpot(M.carByNum[num])) ? num : 0; });
-      board[M.gateway] = N; board[cellN] = 0;   // car 5 leaves to E1; new car enters at the gateway
-      const sol = solvePuzzle(board, M.cells, M.neighbors, cellN, N);
-      if (!sol) { flash('לא נמצא נתיב קליטה'); return; }
-      const tasks = [ outToE1(M.carByNum[5]), ...intakePrelude(tgN, false), intakeDrive1(tgN, gw, homeRy(tgN)) ];
-      pushMoves(tasks, n => M.carByNum[n], M.cellWorld, sol);
+      const board = {}; M.cells.forEach(k => board[k] = M.numByCell[k] || 0);
+      board[M.gateway] = 0;   // car 5 out at E1
+      const route = solvePuzzle(board, M.cells, M.neighbors, M.gateway, N);
+      if (!route) { flash('לא נמצא נתיב קליטה'); return; }
+      const car = trayCar(tgN); if (car) car.visible = false;
+      const tasks = [ outToE1(M.carByNum[5]) ];
+      movesToTasks(M, route).forEach(t => tasks.push(t));       // N -> gateway
+      const up = fullExit(tgN, false);                          // gateway -> turntable -> lift, rise
+      up.onDone = () => { if (car) car.visible = true; tgN.userData.empty = false; };   // car boards at the top
+      tasks.push(up, intakeDrive1(tgN, M.cellWorld[M.gateway], homeRy(tgN)));   // descend back to the gateway
+      const backSol = route.slice().reverse().map(mv => ({ car: mv.car, from: mv.to, to: mv.from }));
+      movesToTasks(M, backSol).forEach(t => tasks.push(t));     // reverse route: restore grid, park N at its cell
+      tasks.push(moveTask(M.carByNum[5], M.cellWorld[M.gateway].x, M.cellWorld[M.gateway].z, homeRy(M.carByNum[5])));
       tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + N + ' נקלט ✓'); };
       runTasks(tasks);
-      flash('קליטת רכב ' + N + ' — ' + sol.length + ' הזזות');
+      flash('קליטת רכב ' + N + ' — ' + (route.length * 2) + ' הזזות');
     }
     // the FRONT of a block is the side near the turntable; the front-most empty spot is the empty tray
     // currently sitting closest to the turntable — filling it first keeps future intakes cheap.
