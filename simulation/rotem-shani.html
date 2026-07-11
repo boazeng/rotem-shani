@@ -627,7 +627,8 @@
 
     // ============ CAR LIFT (movable) ============
     let liftGroup = null, liftPlatform = null;
-    const LIFT_PLAT_Y = 0.1;
+    const LIFT_PLAT_Y = -0.1;   // platform is 0.2 thick -> its TOP rests at y=0 (the tray's base), so a tray
+                                // boarding it sits flush ON it (not swallowed). It drops into a pit (below).
     const liftSrc = (savedLayout && savedLayout.lift) ? savedLayout.lift : L.lift;
     if (liftSrc) {
       const lg = new THREE.Group();
@@ -668,6 +669,22 @@
         // ShapeGeometry/ExtrudeGeometry + rotateX(-PI/2) map shape.y -> world -Z, so negate Z to land the hole
         // on the lift's real world position (the bbox is ~symmetric in Z, which is why floor/grass looked fine).
         liftHole = () => new THREE.Path(cn.map(c => new THREE.Vector2(c[0], -c[1])));
+        // dig a shallow PIT under the lift: cut the garage floor here so the lowered platform (top at y=0)
+        // drops into a lined recess, and a boarding tray sits flush on the platform instead of inside it.
+        { const fShape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.y)));
+          fShape.holes.push(liftHole());
+          const fGeo = new THREE.ShapeGeometry(fShape); fGeo.rotateX(-Math.PI / 2);
+          floor.geometry.dispose(); floor.geometry = fGeo; }
+        const PITD = 0.35, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // pit depth / wall thickness / opening
+        const pitMat = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 1.0, metalness: 0.0 });
+        const pit = new THREE.Group(); pit.position.set(lx, 0, lz); pit.rotation.y = lry;
+        const bot = new THREE.Mesh(new THREE.BoxGeometry(iw + 2 * WT, 0.05, idp + 2 * WT), pitMat);
+        bot.position.y = -PITD; bot.receiveShadow = true; pit.add(bot);
+        const wA = new THREE.BoxGeometry(iw + 2 * WT, PITD, WT);
+        [-1, 1].forEach(s => { const w = new THREE.Mesh(wA, pitMat); w.position.set(0, -PITD / 2, s * (idp / 2 + WT / 2)); pit.add(w); });
+        const wB = new THREE.BoxGeometry(WT, PITD, idp);
+        [-1, 1].forEach(s => { const w = new THREE.Mesh(wB, pitMat); w.position.set(s * (iw / 2 + WT / 2), -PITD / 2, 0); pit.add(w); });
+        scene.add(pit);
       }
       // concrete ceiling = a big RECTANGLE that fully covers the garage from any angle (parallax-proof),
       // raised slightly above the wall tops so they stay hidden. OPAQUE, 40 cm, small opening around the lift posts.
@@ -731,10 +748,15 @@
       grassMesh.visible = false;
       scene.add(grassMesh);
 
-      // surrounding earth at the BASE (not at roof height) so the pit walls stay fully visible above it
-      const earthMesh = new THREE.Mesh(new THREE.PlaneGeometry(180, 180),
-        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0 }));
-      earthMesh.rotation.x = -Math.PI / 2;
+      // surrounding earth at the BASE (not at roof height) so the pit walls stay fully visible above it.
+      // Cut the same lift opening so the earth plane doesn't slice across the pit.
+      const earthShape = new THREE.Shape([
+        new THREE.Vector2(-90, -90), new THREE.Vector2(90, -90),
+        new THREE.Vector2(90, 90), new THREE.Vector2(-90, 90)]);
+      if (liftHole) earthShape.holes.push(liftHole());
+      const earthGeo = new THREE.ShapeGeometry(earthShape); earthGeo.rotateX(-Math.PI / 2);
+      const earthMesh = new THREE.Mesh(earthGeo,
+        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0, side: THREE.DoubleSide }));
       earthMesh.position.y = -0.05;
       earthMesh.receiveShadow = true;
       scene.add(earthMesh);
