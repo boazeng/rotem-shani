@@ -1406,40 +1406,61 @@
           steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] };
       });
     }
-    // BLOCK-2 exit with front-packing: after the car vanishes at the lift, the OTHER trays re-pack so empty
-    // trays cluster at the aisle-front and cars pack deep; then the freed EMPTY tray descends from the lift
-    // and drives back to the front-most cell (near the turntable). Never snaps to the car's original spot.
-    function scheduleExit2(tgT, T) {
+    // parking cells of each block-2 column, ordered BACK -> FRONT (front = nearest the aisle/E1). A0 is the
+    // maneuvering blank and is not a parking cell. The front cell is where a freed empty tray parks.
+    const B2COL = { 0: ['0,0', '0,1', '0,2'], 1: ['1,0', '1,1', '1,2', '1,3'], 2: ['2,0', '2,1', '2,2'] };
+    // BLOCK-2 exit, PER-COLUMN: after the car vanishes at the lift, only ITS column compacts — the cars there
+    // shift back (inward) and the freed EMPTY tray drives back through E1 to that column's FRONT cell. Other
+    // columns are restored to where they were; never snaps the empty tray to the car's original spot.
+    function scheduleExit2(tgT, T, preBoard, cellT) {
       return () => delay(3, () => {
         const c = trayCar(tgT); if (c) c.visible = false;
         tgT.userData.empty = true;
         const M = block2Model();
         if (!M) { settleClean(); flash('רכב ' + T + ' יצא מהמתקן ✓'); return; }
-        const cells = M.cells, park = M.park, A0 = M.A0;
-        // board with T ABSENT (its tray is up at the lift): match the other 9 trays to nearest anchors
+        const cells = M.cells, A0 = M.A0;
+        // current post-route positions with T absent (its tray is up at the lift)
         const board = {}; cells.forEach(k => board[k] = 0);
         [12, 13, 14, 15, 16, 17, 18, 19, 20, 21].forEach(n => {
           if (n === T) return; const g = M.tray(n); let best = null, bd = Infinity;
           cells.forEach(k => { const d = Math.hypot(g.position.x - M.cellWorld[k].x, g.position.z - M.cellWorld[k].z); if (d < bd) { bd = d; best = k; } });
           board[best] = n;
         });
-        // target: park[0] (front, A0-adjacent) reserved blank for T; present empties fill the next front
-        // cells; cars fill the back cells; A0 stays blank.
-        const present = park.map(k => board[k]).filter(v => v !== 0);
-        const emp = present.filter(n => isEmptySpot(M.tray(n)));
-        const cars = present.filter(n => !isEmptySpot(M.tray(n)));
-        const Tfront = park[0];
-        const target = {}; cells.forEach(k => target[k] = 0);
-        const slots = park.slice(1);
-        emp.concat(cars).forEach((n, i) => target[slots[i]] = n);   // empties(front) then cars(back)
-        const repack = solveToBoard(board, cells, M.neighbors, target);
+        // PER-COLUMN target: only T's column compacts (cars back, empties incl. T to front); other columns
+        // keep their pre-exit arrangement; A0 stays the blank. Works when T's exit stayed within its column
+        // + the aisle (columns 0 and 1). Column 2 has no aisle cell, so its exit must cross column 1 and the
+        // restore becomes unreachable -> we fall back to a GLOBAL pack (empties cluster at the aisle-front).
+        const col = parseInt(cellT.split(',')[0], 10);
+        const cc = B2COL[col];
+        let frontCell = cc[cc.length - 1], target2 = null, repack = null;
+        // per-column only when the column's front cell is reachable from A0 in one slide (columns 0 & 1). Otherwise
+        // the returning empty tray would have to shove cars aside to reach it, so we use the global pack instead.
+        if (M.neighbors(A0).includes(frontCell)) {
+          const occ = cc.map(k => preBoard[k]).filter(v => v && v !== T);
+          const cars = occ.filter(n => !isEmptySpot(M.tray(n)));
+          const emps = occ.filter(n => isEmptySpot(M.tray(n)));
+          const ordered = cars.concat(emps, [T]);   // back -> front, T front-most
+          const target = {}; cells.forEach(k => target[k] = preBoard[k] || 0);
+          target[A0] = 0;
+          cc.forEach((k, i) => target[k] = ordered[i] || 0);
+          target2 = Object.assign({}, target); target2[frontCell] = 0;   // T absent -> its front cell reserved
+          repack = solveToBoard(board, cells, M.neighbors, target2);
+        }
+        if (!repack) {                                           // fall back to a global aisle-front pack
+          const park = M.park; frontCell = park[0];
+          const present = park.map(k => board[k]).filter(v => v !== 0);
+          const gEmp = present.filter(n => isEmptySpot(M.tray(n))), gCars = present.filter(n => !isEmptySpot(M.tray(n)));
+          const g2 = {}; cells.forEach(k => g2[k] = 0); const slots = park.slice(1);
+          gEmp.concat(gCars).forEach((n, i) => g2[slots[i]] = n);
+          target2 = g2; repack = solveToBoard(board, cells, M.neighbors, target2);
+        }
         const tasks = repack ? movesToTasks(M, repack) : [];
-        // T descends from the lift, drives back to A0 (rotating to the grid orientation), then slides to the front cell
+        // T descends, returns through E1 to A0, then slides into its column's FRONT cell
         tasks.push(intakeDrive2(tgT, M.cellWorld[A0], homeRy(tgT)));
-        const a = M.cellWorld[A0], b = M.cellWorld[Tfront];
-        tasks.push({ tray: tgT, end: { x: b.x, z: b.z, ry: tgT.rotation.y },
-          steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] });
-        tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + T + ' יצא — הרכבים נדחסו, מגש ריק בחזית ✓'); };
+        const retStart = Object.assign({}, target2); retStart[A0] = T;
+        const retSol = solvePuzzle(retStart, cells, M.neighbors, frontCell, T);
+        (retSol ? movesToTasks(M, retSol) : [movesToTasks(M, [{ car: T, from: A0, to: frontCell }])[0]]).forEach(t => tasks.push(t));
+        tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + T + ' יצא — הטור נדחס, מגש ריק בחזית ✓'); };
         if (!runTasks(tasks)) { settleClean(); }
       });
     }
@@ -1515,11 +1536,12 @@
       // 15-puzzle: bring T to A0 AND leave A1 empty. Requiring A1 empty keeps the aisle exit lane clear when
       // T drives A0 -> E1. Works from the current (possibly front-packed) arrangement, not just the canonical one.
       const board = {}; M.cells.forEach(k => board[k] = M.numByCell[k] || 0);
+      const cellT = Object.keys(M.numByCell).find(k => M.numByCell[k] === T);   // T's column (for per-column compaction)
       const sol = solvePuzzle(board, M.cells, M.neighbors, M.A0, T, b => b[M.A1] === 0);
       if (!sol) { flash('לא נמצא פתרון בלוק 2'); return; }
       const tasks = movesToTasks(M, sol);
-      // T drives A0 -> E1 -> turntable -> lift; then front-packing repacks and the empty tray returns to the front
-      { const ex = fullExit(M.tray(T), true); ex.onDone = scheduleExit2(M.tray(T), T); tasks.push(ex); }
+      // T drives A0 -> E1 -> turntable -> lift; then its COLUMN compacts and the empty tray returns to the column front
+      { const ex = fullExit(M.tray(T), true); ex.onDone = scheduleExit2(M.tray(T), T, board, cellT); tasks.push(ex); }
       runTasks(tasks);
       flash('חילוץ רכב ' + T + ' מבלוק 2 — ' + sol.length + ' הזזות');
     }
