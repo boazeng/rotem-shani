@@ -1543,7 +1543,7 @@
       const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
       const e1x = e1Group ? e1Group.position.x : ttx, e1z = e1Group ? e1Group.position.z : ttz;
       const cur = g.rotation.y, base = (targetRy != null ? targetRy : cur);
-      let dd = (base - cur) % (2 * Math.PI); if (dd > 0) dd -= 2 * Math.PI;   // clockwise, like the exit
+      let dd = (base - cur) % (2 * Math.PI); if (dd > Math.PI) dd -= 2 * Math.PI; if (dd < -Math.PI) dd += 2 * Math.PI;   // shortest turn (<=180)
       const ry = cur + dd;
       return { tray: g, end: { x: a0.x, z: a0.z, ry, y: 0 }, steps: [
         { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
@@ -1558,7 +1558,7 @@
       const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
       const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
       const cur = g.rotation.y, base = (targetRy != null ? targetRy : cur);
-      let dd = (base - cur) % (2 * Math.PI); if (dd > 0) dd -= 2 * Math.PI;
+      let dd = (base - cur) % (2 * Math.PI); if (dd > Math.PI) dd -= 2 * Math.PI; if (dd < -Math.PI) dd += 2 * Math.PI;   // shortest turn
       const ry = cur + dd;
       return { tray: g, end: { x: gw.x, z: gw.z, ry, y: 0 }, steps: [
         { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
@@ -1592,17 +1592,23 @@
       if (!isEmptySpot(tgN)) { flash('משבצת ' + N + ' תפוסה'); return; }
       const cellN = Object.keys(M.numByCell).find(k => M.numByCell[k] === N);
       if (!cellN) { flash('לא ניתן לקלוט למשבצת ' + N); return; }
-      // the tray rises empty, the car boards, then it re-enters at the aisle blank A0 and slides back to its
-      // (front) cell. Empty trays are physical tiles here; only the aisle A0 is blank.
+      // The empty tray behaves EXACTLY like a car: it first slides out through the aisle to A0 (the puzzle
+      // pushes any front car inward to clear the lane), drives A0 -> E1 -> turntable -> lift, and rises. The
+      // car boards at the top. Then it descends, returns to A0, and the route is REVERSED — restoring every
+      // other car to its place and parking the now-loaded tray back in its (front) cell.
       const board = {}; M.cells.forEach(k => board[k] = M.numByCell[k] || 0);
-      board[cellN] = 0;      // N's tray is up at the lift -> its cell is momentarily free
-      board[M.A0] = N;       // N re-enters through the aisle blank
-      const sol = solvePuzzle(board, M.cells, M.neighbors, cellN, N);
-      if (!sol) { flash('לא נמצא נתיב קליטה'); return; }
-      const tasks = [ ...intakePrelude(tgN, true), intakeDrive2(tgN, M.cellWorld[M.A0], homeRy(tgN)), ...movesToTasks(M, sol) ];
+      const route = solvePuzzle(board, M.cells, M.neighbors, M.A0, N, b => b[M.A1] === 0);
+      if (!route) { flash('לא נמצא נתיב קליטה'); return; }
+      const car = trayCar(tgN); if (car) car.visible = false;   // rises empty
+      const tasks = movesToTasks(M, route);                     // N -> A0 through the aisle, front car moves inward
+      const up = fullExit(tgN, true);                           // A0 -> E1 -> turntable -> align -> into the lift -> rise
+      up.onDone = () => { if (car) car.visible = true; tgN.userData.empty = false; };   // car boards at the top
+      tasks.push(up, intakeDrive2(tgN, M.cellWorld[M.A0], homeRy(tgN)));   // descend + return to A0
+      const back = route.slice().reverse().map(mv => ({ car: mv.car, from: mv.to, to: mv.from }));
+      movesToTasks(M, back).forEach(t => tasks.push(t));        // reverse the route: restore the grid, park N
       tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + N + ' נקלט ✓'); };
       runTasks(tasks);
-      flash('קליטת רכב ' + N + ' — ' + sol.length + ' הזזות');
+      flash('קליטת רכב ' + N + ' — ' + (route.length * 2) + ' הזזות');
     }
     function intakeToBlock1(N) {
       const M = blockModel(); if (!M) { flash('בלוק 1 לא זוהה'); return; }
