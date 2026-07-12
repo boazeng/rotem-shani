@@ -467,7 +467,6 @@
     function hoodNum(num) {
       const c = document.createElement('canvas'); c.width = c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.translate(256, 0); ctx.scale(-1, 1);   // pre-mirror (the flat/rotated plane mirrors it back)
       ctx.fillStyle = '#8dff9d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 200; ctx.font = 'bold ' + fs + 'px Arial';
       while (ctx.measureText(String(num)).width > 224 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
@@ -619,7 +618,6 @@
     function floorNum(text, x, z) {
       const c = document.createElement('canvas'); c.width = c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.translate(256, 0); ctx.scale(-1, 1);   // pre-mirror: the flat (rotated) plane mirrors it back to normal
       ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 172; ctx.font = 'bold ' + fs + 'px Arial';
       while (ctx.measureText(text).width > 232 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
