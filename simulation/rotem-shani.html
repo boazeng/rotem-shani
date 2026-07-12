@@ -592,6 +592,33 @@
       e1Group = g;
     }
 
+    // ============ P1 / P2 markers — the aisle spots directly in front of parking 14 and 20 ============
+    const pMarks = [];
+    {
+      const aisleZ = pz(7.9);   // the transfer/aisle row (same row as E1)
+      const t14 = trayGroups.find(g => g.userData.num === 14);
+      const t20 = trayGroups.find(g => g.userData.num === 20);
+      const defs = [];
+      if (t14) defs.push({ text: 'P1', x: t14.position.x });   // facing parking 14
+      if (t20) defs.push({ text: 'P2', x: t20.position.x });   // facing parking 20
+      const col = 0xffcf3f;   // amber (E1 is green)
+      defs.forEach(d => {
+        const g = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.06, 20),
+          new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55, depthTest: false }));
+        base.position.y = 0.04; base.renderOrder = 6;
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.9, 10),
+          new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
+        pin.position.y = 0.95; pin.renderOrder = 6;
+        const lab = new THREE.Sprite(textSprite(d.text, '#ffcf3f'));
+        lab.position.y = 2.25; lab.scale.set(1.5, 1.5, 1.5);
+        g.add(base, pin, lab);
+        g.position.set(d.x, 0, aisleZ);
+        g.userData.isPmark = true;
+        scene.add(g); pMarks.push(g);
+      });
+    }
+
     // ============ USER WALLS (build / delete) ============
     const userWalls = new THREE.Group();
     scene.add(userWalls);
@@ -808,6 +835,7 @@
     document.getElementById('tNums').onchange = e => {
       numberLabels.forEach(l => l.visible = e.target.checked);
       if (e1Group) e1Group.visible = e.target.checked;   // hide the E1 marker together with the numbers
+      pMarks.forEach(g => g.visible = e.target.checked);  // ... and the P1/P2 markers
     };
     document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
     document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
