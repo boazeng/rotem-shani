@@ -615,20 +615,25 @@
     // "P" + the car number that starts there; they lie flat on the floor (as if painted) and stay put as the
     // cars move, so the parking-spot numbering is constant. P23/P24 are the aisle spots facing 14 and 20.
     const spotLabels = [];
-    function floorNum(text, x, z) {
+    function makeFloorLabel(text, onTop) {          // painted number lying flat, reads upright in "top view"
       const c = document.createElement('canvas'); c.width = c.height = 256;
       const ctx = c.getContext('2d');
       ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 172; ctx.font = 'bold ' + fs + 'px Arial';
-      while (ctx.measureText(text).width > 232 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
+      while (ctx.measureText(text).width > 224 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
       ctx.translate(128, 128); ctx.rotate(Math.PI); ctx.fillText(text, 0, 0);   // 180° so "top view" reads upright
       const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2;          // lie flat on the concrete
-      m.position.set(x, 0.03, z);           // just above the floor; the tray occludes it when parked over it
-      m.renderOrder = 4;
-      scene.add(m); spotLabels.push(m); return m;
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: !onTop }));
+      m.rotation.x = -Math.PI / 2; m.renderOrder = onTop ? 7 : 4;   // onTop: draw over the turntable/lift disk
+      spotLabels.push(m); return m;
+    }
+    function floorNum(text, x, z, onTop) { const m = makeFloorLabel(text, onTop); m.position.set(x, 0.03, z); scene.add(m); return m; }
+    // a floor-level center marker (red dot+ring) like the parking-spot centers, at (x,z) or added to `parent`
+    function floorCenter(x, z, parent) {
+      const grp = makeCenterMarker(0.06);
+      if (parent) { parent.add(grp); } else { grp.position.set(x, 0.06, z); scene.add(grp); }
+      return grp;
     }
     const aisleZ = pz(7.9);                 // the transfer/aisle row (same row as E1)
     trayGroups.forEach(g => {
@@ -636,8 +641,9 @@
       const z = (g.userData.num === 21) ? aisleZ : g.position.z;
       floorNum('P' + g.userData.num, g.position.x, z);
     });
-    { const t14 = trayGroups.find(g => g.userData.num === 14); if (t14) floorNum('P23', t14.position.x, aisleZ); }
-    { const t20 = trayGroups.find(g => g.userData.num === 20); if (t20) floorNum('P24', t20.position.x, aisleZ); }
+    // P23/P24 aisle spots (facing 14 and 20) — painted number AND a center marker, exactly like the others
+    { const t14 = trayGroups.find(g => g.userData.num === 14); if (t14) { floorNum('P23', t14.position.x, aisleZ); floorCenter(t14.position.x, aisleZ); } }
+    { const t20 = trayGroups.find(g => g.userData.num === 20); if (t20) { floorNum('P24', t20.position.x, aisleZ); floorCenter(t20.position.x, aisleZ); } }
 
     // ============ USER WALLS (build / delete) ============
     const userWalls = new THREE.Group();
@@ -845,24 +851,36 @@
         new THREE.MeshBasicMaterial({ color: 0xffee55, depthTest: false }));
       ring.rotation.x = Math.PI / 2; ring.position.set(ix, Y, ttz); ring.renderOrder = 7;
       guideLines.add(dot, ring);
-      // ---- named reference markers (float above each point) ----
-      const glabel = (text, x, z, hex) => { const s = new THREE.Sprite(textSprite(text, hex));
-        s.position.set(x, Y + 1.4, z); s.scale.set(1.5, 1.5, 1.5); s.renderOrder = 8; guideLines.add(s); };
+      // new guide line from car 1, parallel to the turntable's travel line (1,0); E4 = where it meets the lift axis
       const gdot = (x, z, color) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16),
         new THREE.MeshBasicMaterial({ color, depthTest: false })); d.position.set(x, Y, z); d.renderOrder = 7; guideLines.add(d); };
-      glabel('EL', lx, lz, '#ff8c42');          // lift center (on the orange lift axis)
-      glabel('W1', ttx, ttz, '#7fd0ff');        // turntable center (on the cyan travel line)
-      glabel('E3', ix, ttz, '#ffee55');         // lift-axis × turntable-travel line intersection
-      // new guide line from car 1, parallel to the turntable's travel line (1,0); E4 = where it meets the lift axis
       const c1 = trayGroups.find(g => g.userData.num === 1);
       if (c1) {
-        const c1x = c1.position.x, c1z = c1.position.z;
-        guideLines.add(bar(c1x, c1z, 1, 0, 0x7dff7d));   // green: car-1 line ∥ travel line
-        const s = (c1z - lz) / (luz || 1e-9), e4x = lx + lux * s;   // meet the lift axis at z = c1z
-        gdot(e4x, c1z, 0x7dff7d); glabel('E4', e4x, c1z, '#7dff7d');
+        guideLines.add(bar(c1.position.x, c1.position.z, 1, 0, 0x7dff7d));   // green: car-1 line ∥ travel line
+        const e4x = lx + lux * (c1.position.z - lz) / (luz || 1e-9);
+        gdot(e4x, c1.position.z, 0x7dff7d);
       }
     }
     buildGuides();
+
+    // ============ named reference points as floor SPOTS (painted number + center marker), like the parking spots ==
+    // E1 (entry), EL (lift center), W1 (turntable center), E3 (lift-axis × travel line), E4 (car-1 line × lift axis)
+    if (turntableGroup && liftGroup) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, phiL = liftGroup.rotation.y;
+      const lux = Math.cos(phiL), luz = -Math.sin(phiL);
+      const ix = lx + lux * (ttz - lz) / (luz || 1e-9);
+      const named = [['EL', lx, lz], ['W1', ttx, ttz], ['E3', ix, ttz]];
+      const c1 = trayGroups.find(g => g.userData.num === 1);
+      if (c1) named.push(['E4', lx + lux * (c1.position.z - lz) / (luz || 1e-9), c1.position.z]);
+      named.forEach(([txt, x, z]) => { floorNum(txt, x, z, true); floorCenter(x, z); });   // onTop: over turntable/lift
+    }
+    // E1 — replace its pin with a painted floor label + center (as children of e1Group, so they move with it)
+    if (e1Group) {
+      for (let i = e1Group.children.length - 1; i >= 0; i--) e1Group.remove(e1Group.children[i]);
+      const lab = makeFloorLabel('E1', true); lab.position.set(0, 0.03, 0); e1Group.add(lab);
+      floorCenter(0, 0, e1Group);
+    }
 
     // ---------- HUD ----------
     document.getElementById('dim').textContent = `${W.toFixed(1)}×${D.toFixed(1)} מ׳`;
@@ -871,9 +889,8 @@
     document.getElementById('tNums').onchange = e => {   // green car numbers — travel with the cars
       numberLabels.forEach(l => l.visible = e.target.checked);
     };
-    document.getElementById('tSpots').onchange = e => {   // fixed parking-spot numbers: P1..P24 (painted) + E1
+    document.getElementById('tSpots').onchange = e => {   // fixed painted numbers: P1..P24, E1, EL, W1, E3, E4
       spotLabels.forEach(s => s.visible = e.target.checked);
-      if (e1Group) e1Group.visible = e.target.checked;
     };
     document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
     document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
