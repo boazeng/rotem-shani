@@ -827,6 +827,22 @@
         new THREE.MeshBasicMaterial({ color: 0xffee55, depthTest: false }));
       ring.rotation.x = Math.PI / 2; ring.position.set(ix, Y, ttz); ring.renderOrder = 7;
       guideLines.add(dot, ring);
+      // ---- named reference markers (float above each point) ----
+      const glabel = (text, x, z, hex) => { const s = new THREE.Sprite(textSprite(text, hex));
+        s.position.set(x, Y + 1.4, z); s.scale.set(1.5, 1.5, 1.5); s.renderOrder = 8; guideLines.add(s); };
+      const gdot = (x, z, color) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16),
+        new THREE.MeshBasicMaterial({ color, depthTest: false })); d.position.set(x, Y, z); d.renderOrder = 7; guideLines.add(d); };
+      glabel('EL', lx, lz, '#ff8c42');          // lift center (on the orange lift axis)
+      glabel('W1', ttx, ttz, '#7fd0ff');        // turntable center (on the cyan travel line)
+      glabel('E3', ix, ttz, '#ffee55');         // lift-axis × turntable-travel line intersection
+      // new guide line from car 1, parallel to the turntable's travel line (1,0); E4 = where it meets the lift axis
+      const c1 = trayGroups.find(g => g.userData.num === 1);
+      if (c1) {
+        const c1x = c1.position.x, c1z = c1.position.z;
+        guideLines.add(bar(c1x, c1z, 1, 0, 0x7dff7d));   // green: car-1 line ∥ travel line
+        const s = (c1z - lz) / (luz || 1e-9), e4x = lx + lux * s;   // meet the lift axis at z = c1z
+        gdot(e4x, c1z, 0x7dff7d); glabel('E4', e4x, c1z, '#7dff7d');
+      }
     }
     buildGuides();
 
