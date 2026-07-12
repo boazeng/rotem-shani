@@ -90,6 +90,7 @@
     <div class="legend">
       <label class="tog"><input type="checkbox" id="tPlan"> שרטוט (DWG)</label><br>
       <label class="tog"><input type="checkbox" id="tNums" checked> מספרי חניה</label><br>
+      <label class="tog"><input type="checkbox" id="tSpots" checked> חניות (P)</label><br>
       <label class="tog"><input type="checkbox" id="tCenters"> סימון מרכזים</label><br>
       <label class="tog"><input type="checkbox" id="tGuides"> קווי עזר</label><br>
       <label class="tog"><input type="checkbox" id="tDark" checked> חושך מוחלט (כיבוי אור סביבתי)</label><br>
@@ -621,6 +622,17 @@
       });
     }
 
+    // ============ P<n> spot labels — FIXED floor labels at each tray's START position ============
+    // "P" + the number of the car that sits there at the start of the simulation. They stay put even after
+    // the cars/trays move (front-packing, exits), so the parking-spot numbering is constant.
+    const spotLabels = [];
+    trayGroups.forEach(g => {
+      const s = new THREE.Sprite(textSprite('P' + g.userData.num, '#ffcf3f'));
+      s.position.set(g.position.x, 0.4, g.position.z);   // fixed on the floor at the start spot
+      s.scale.set(1.3, 1.3, 1.3); s.renderOrder = 5;
+      scene.add(s); spotLabels.push(s);
+    });
+
     // ============ USER WALLS (build / delete) ============
     const userWalls = new THREE.Group();
     scene.add(userWalls);
@@ -853,7 +865,10 @@
     document.getElementById('tNums').onchange = e => {
       numberLabels.forEach(l => l.visible = e.target.checked);
       if (e1Group) e1Group.visible = e.target.checked;   // hide the E1 marker together with the numbers
-      pMarks.forEach(g => g.visible = e.target.checked);  // ... and the P23/P24 markers
+    };
+    document.getElementById('tSpots').onchange = e => {   // fixed P spot labels (P1..P22) + aisle P23/P24
+      spotLabels.forEach(s => s.visible = e.target.checked);
+      pMarks.forEach(g => g.visible = e.target.checked);
     };
     document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
     document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
