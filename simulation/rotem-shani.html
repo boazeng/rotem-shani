@@ -1273,6 +1273,16 @@
     }
     function advanceOne(a, dt) {
       const s = a.steps[a.i];
+      // 'turn' steps resolve at RUN time (not build time): always the SHORTEST direction from the tray's
+      // ACTUAL current angle to the target `s.to`, with the duration set by the max spin speed (CFG.spin).
+      // This keeps every turntable rotation calm and correct even if an earlier step already re-oriented the tray.
+      if (s.type === 'turn' && !s._ready) {
+        let d = (s.to - a.from.ry) % (2 * Math.PI);
+        if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+        s._to = a.from.ry + d;
+        s.dur = Math.max(0.2, Math.abs(d) * 180 / Math.PI / CFG.spin);
+        s._ready = true;
+      }
       a.t += dt;
       const k = Math.min(1, a.t / s.dur), e = easeInOut(k);
       const tr = a.tray;
@@ -1282,7 +1292,7 @@
       } else if (s.type === 'spin') {
         tr.rotation.y = a.from.ry - s.turns * 2 * Math.PI * e;
       } else if (s.type === 'turn') {
-        tr.rotation.y = a.from.ry + (s.to - a.from.ry) * e;
+        tr.rotation.y = a.from.ry + (s._to - a.from.ry) * e;
       } else if (s.type === 'liftup') {
         tr.position.y = a.from.y + (s.to - a.from.y) * e;
         if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + tr.position.y;
@@ -1290,7 +1300,8 @@
       if (k >= 1) {
         a.i++;
         if (a.i >= a.steps.length) {
-          tr.position.x = a.end.x; tr.position.z = a.end.z; tr.rotation.y = a.end.ry;
+          tr.position.x = a.end.x; tr.position.z = a.end.z;
+          if (a.end.ry !== undefined) tr.rotation.y = a.end.ry;   // pure-slide tasks omit ry -> keep current orientation
           if (a.end.y !== undefined) { tr.position.y = a.end.y; if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y + a.end.y; }
           return true;
         }
@@ -1335,6 +1346,56 @@
       flash('מדמה משטח #' + num + '…');
     }
 
+    // ============ MOVEMENT CONSTRAINT GRAPH (from "car position.xlsx") ============
+    // Single source of truth for legal tray moves: each node lists the spots a tray may slide to from it.
+    // Nodes: 'P1'..'P22' parking spots · 'P23'/'P24' aisle spots (= grid cells A1/A0) · E1/W1/E3/EL/E4 the
+    // corridor + elevator. Undirected & fully symmetric. The sliding-puzzle neighbours are filtered through
+    // this graph so a tray only ever moves between connected spots (e.g. columns cross only at their ends,
+    // never in the middle row) and the corridor follows P23/P24 -> E1 -> W1 -> E3 -> EL exactly.
+    const MOVE_GRAPH = {
+      E1: ['P23', 'P24', 'W1'],
+      P24: ['E1', 'P20'],
+      P23: ['P21', 'P14', 'E1'],
+      E3: ['EL', 'W1'],
+      EL: ['E3', 'E4'],
+      E4: ['P1', 'EL'],
+      W1: ['E1', 'P5', 'E3'],
+      P1: ['E4'],
+      P2: ['P6', 'P3', 'P9'],
+      P3: ['P2', 'P4'],
+      P4: ['P3', 'P5', 'P8', 'P11'],
+      P5: ['P22', 'P4', 'W1'],
+      P6: ['P2', 'P7'],
+      P7: ['P6', 'P8'],
+      P8: ['P7', 'P22', 'P4'],
+      P9: ['P2', 'P10'],
+      P10: ['P9', 'P11'],
+      P11: ['P10', 'P4'],
+      P12: ['P15', 'P13', 'P18'],
+      P13: ['P14', 'P12'],
+      P14: ['P17', 'P20', 'P23', 'P13'],
+      P15: ['P12', 'P16'],
+      P16: ['P17', 'P15'],
+      P17: ['P16', 'P14'],
+      P18: ['P12', 'P19'],
+      P19: ['P18', 'P20'],
+      P20: ['P19', 'P14', 'P24'],
+      P21: ['P23'],
+      P22: ['P5', 'P8'],
+    };
+    const graphAllows = (a, b) => !!a && !!b && (MOVE_GRAPH[a] || []).includes(b);
+    // canonical grid-cell -> graph node. BLOCK 1 is filled dynamically at anchor capture (cell -> 'P'+carNum);
+    // its empty corner cell stays undefined (a pure maneuvering cell -> keeps plain grid adjacency).
+    let B1CELL2NODE = null;
+    // BLOCK 2 is fixed: the 9 parking cells + the two aisle cells A0='0,3'(P24) / A1='1,3'(P23).
+    const CELL2NODE_B2 = { '0,0': 'P18', '0,1': 'P19', '0,2': 'P20', '1,0': 'P12', '1,1': 'P13', '1,2': 'P14',
+      '2,0': 'P15', '2,1': 'P16', '2,2': 'P17', '0,3': 'P24', '1,3': 'P23' };
+    const B2AISLE = new Set(['0,3', '1,3']);
+    // edge tests: keep an edge only if the graph connects the two spots. Aisle<->aisle (A0<->A1) is kept as a
+    // maneuvering move, and BLOCK-1's blank corner (undefined node) keeps plain adjacency so the solver can turn.
+    const b1edgeOK = (a, b) => (!B1CELL2NODE || !B1CELL2NODE[a] || !B1CELL2NODE[b]) ? true : graphAllows(B1CELL2NODE[a], B1CELL2NODE[b]);
+    const b2edgeOK = (a, b) => (B2AISLE.has(a) && B2AISLE.has(b)) ? true : graphAllows(CELL2NODE_B2[a], CELL2NODE_B2[b]);
+
     // ============ BLOCK-1 model (rotated 3×4 grid) + 15-puzzle extraction ============
     const BLOCK1 = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22]);
     const COL_SP = 5.33, ROW_SP = 2.27;
@@ -1361,8 +1422,9 @@
         x: ref.x + (i.col - c5i.col) * COL_SP * aU.x + (i.row - c5i.row) * ROW_SP * aV.x,
         z: ref.z + (i.col - c5i.col) * COL_SP * aU.z + (i.row - c5i.row) * ROW_SP * aV.z }; });
       B1ANCHORS = cellWorld; B1GATEWAY = b1key(c5i.col, c5i.row);
+      B1CELL2NODE = {}; info.forEach(i => { B1CELL2NODE[b1key(i.col, i.row)] = 'P' + i.num; });   // canonical cell -> graph node
       const cellSet = new Set(Object.keys(cellWorld));
-      const nb = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(x => cellSet.has(x)); };
+      const nb = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(x => cellSet.has(x) && b1edgeOK(kk, x)); };
       const dist = { [B1GATEWAY]: 0 }, q = [B1GATEWAY];
       while (q.length) { const u = q.shift(); nb(u).forEach(v => { if (dist[v] === undefined) { dist[v] = dist[u] + 1; q.push(v); } }); }
       B1PARK = Object.keys(cellWorld).filter(k => k !== B1GATEWAY).sort((a, b) => dist[a] - dist[b] || (a < b ? -1 : 1));
@@ -1377,7 +1439,7 @@
         cells.forEach(k => { const d = Math.hypot(g.position.x - cellWorld[k].x, g.position.z - cellWorld[k].z); if (d < bd) { bd = d; best = k; } });
         numByCell[best] = n; carByNum[n] = g; cellByNum[n] = best; });
       const cellSet = new Set(cells);
-      const neighbors = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(n => cellSet.has(n)); };
+      const neighbors = kk => { const [c, r] = kk.split(',').map(Number); return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b1key(a, b)).filter(n => cellSet.has(n) && b1edgeOK(kk, n)); };
       return { tray, key: b1key, cells, cellWorld, numByCell, carByNum, cellByNum, neighbors, gateway: B1GATEWAY, park: B1PARK };
     }
 
@@ -1503,6 +1565,16 @@
     }
     const moveTask = (g, wx, wz, ry) => ({ tray: g, end: { x: wx, z: wz, ry: (ry != null ? ry : g.rotation.y) },
       steps: [{ type: 'move', to: { x: wx, z: wz }, dur: dur(Math.hypot(g.position.x - wx, g.position.z - wz)) }] });
+    // return a ground-level tray (e.g. car 5 parked at E1) into a block the ORDERLY way, mirroring outToE1:
+    // drive to the turntable (W1), turn there to the block orientation (short way, max spin speed), then to dest.
+    function returnViaTurntable(g, destx, destz, targetRy) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const base = (targetRy != null ? targetRy : g.rotation.y), p = g.position;
+      return { tray: g, end: { x: destx, z: destz, ry: base }, steps: [
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.hypot(p.x - ttx, p.z - ttz)) },
+        { type: 'turn', to: base, dur: 0.2 },   // dur re-resolved at run time (short way, max spin speed)
+        { type: 'move', to: { x: destx, z: destz }, dur: dur(Math.hypot(ttx - destx, ttz - destz)) } ] };
+    }
 
     // when an extracted car reaches the lift: after 3s it leaves (car hidden, spot freed), grid settles clean
     function scheduleExit(tg, num) {
@@ -1513,13 +1585,18 @@
         flash('רכב ' + num + ' יצא מהמתקן ✓');
       });
     }
-    // convert a solved sliding-puzzle move list into SEQUENTIAL tasks (no convoy staggering): each slide
-    // must fully finish before the next launches, so a tile never starts before its target cell is vacated.
+    // convert a solved sliding-puzzle move list into tasks WITH a direction, so the scenario engine can CONVOY
+    // them: a row of trays all shifting the SAME way follow each other staggered by CFG.gap instead of each
+    // waiting for the one ahead to finish. Safe because puzzle moves chain through the blank (to[i+1] == from[i]),
+    // so consecutive SAME-direction moves are always a colinear convoy (each slides into the space the one ahead
+    // is vacating). A change of direction is NOT sameDir, so the engine still waits there — a tile never starts
+    // into a cell that isn't being vacated ahead of it (this is what fixed the old "stuck tray" bug).
     function movesToTasks(M, sol) {
       return sol.map(mv => {
         const g = M.tray(mv.car), a = M.cellWorld[mv.from], b = M.cellWorld[mv.to];
-        return { tray: g, end: { x: b.x, z: b.z, ry: g.rotation.y },
-          steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(Math.hypot(a.x - b.x, a.z - b.z)) }] };
+        const dx = b.x - a.x, dz = b.z - a.z, dm = Math.hypot(dx, dz) || 1;
+        return { tray: g, dir: { x: dx / dm, z: dz / dm }, end: { x: b.x, z: b.z },   // no ry -> a slide never re-orients the tray
+          steps: [{ type: 'move', to: { x: b.x, z: b.z }, dur: dur(dm) }] };
       });
     }
     // parking cells of each block-2 column, ordered BACK -> FRONT (front = nearest the aisle/E1). A0 is the
@@ -1612,7 +1689,7 @@
         const retStart = Object.assign({}, target); retStart[gw] = T;
         const retSol = solvePuzzle(retStart, cells, M.neighbors, Tfront, T);
         (retSol ? movesToTasks(M, retSol) : [movesToTasks(M, [{ car: T, from: gw, to: Tfront }])[0]]).forEach(t => tasks.push(t));
-        tasks.push(moveTask(g5, M.cellWorld[gw].x, M.cellWorld[gw].z, homeRy(g5)));   // car 5 returns to the gateway
+        tasks.push(returnViaTurntable(g5, M.cellWorld[gw].x, M.cellWorld[gw].z, homeRy(g5)));   // car 5 returns via W1 to the gateway
         tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + T + ' יצא — הרכבים נדחסו, מגש ריק בחזית ✓'); };
         if (!runTasks(tasks)) { settleClean(); }
       });
@@ -1645,7 +1722,7 @@
     const B2CELLS = ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2', '0,3', '1,3'];  // A2 excluded
     const b2key = (c, r) => c + ',' + r;
     const b2neighbors = kk => { const [c, r] = kk.split(',').map(Number);
-      return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b2key(a, b)).filter(n => B2CELLS.includes(n)); };
+      return [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]].map(([a, b]) => b2key(a, b)).filter(n => B2CELLS.includes(n) && b2edgeOK(kk, n)); };
     function ensureB2Anchors() {
       if (B2ANCHORS) return B2ANCHORS;
       const tray = n => trayGroups.find(g => g.userData.num === n);
@@ -1712,14 +1789,12 @@
       const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
       const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
       const e1x = e1Group ? e1Group.position.x : ttx, e1z = e1Group ? e1Group.position.z : ttz;
-      const cur = g.rotation.y, base = (targetRy != null ? targetRy : cur);
-      let dd = (base - cur) % (2 * Math.PI); if (dd > Math.PI) dd -= 2 * Math.PI; if (dd < -Math.PI) dd += 2 * Math.PI;   // shortest turn (<=180)
-      const ry = cur + dd;
-      return { tray: g, end: { x: a0.x, z: a0.z, ry, y: 0 }, steps: [
+      const base = (targetRy != null ? targetRy : g.rotation.y);   // grid orientation; engine turns the short way at run time
+      return { tray: g, end: { x: a0.x, z: a0.z, ry: base, y: 0 }, steps: [
         { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
         { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },
         { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },
-        { type: 'turn', to: ry, dur: spinDur(Math.abs(dd) * 180 / Math.PI) },
+        { type: 'turn', to: base, dur: 0.2 },   // dur re-resolved at run time from the ACTUAL angle (max spin speed)
         { type: 'move', to: { x: e1x, z: e1z }, dur: dur(Math.hypot(ttx - e1x, ttz - e1z)) },
         { type: 'move', to: { x: a0.x, z: a0.z }, dur: dur(Math.hypot(e1x - a0.x, e1z - a0.z)) } ] };
     }
@@ -1727,14 +1802,12 @@
       const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
       const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
       const lux = Math.cos(lry), luz = -Math.sin(lry), t = (ttz - lz) / (luz || 1e-9), ix = lx + lux * t;
-      const cur = g.rotation.y, base = (targetRy != null ? targetRy : cur);
-      let dd = (base - cur) % (2 * Math.PI); if (dd > Math.PI) dd -= 2 * Math.PI; if (dd < -Math.PI) dd += 2 * Math.PI;   // shortest turn
-      const ry = cur + dd;
-      return { tray: g, end: { x: gw.x, z: gw.z, ry, y: 0 }, steps: [
+      const base = (targetRy != null ? targetRy : g.rotation.y);   // grid orientation; engine turns the short way at run time
+      return { tray: g, end: { x: gw.x, z: gw.z, ry: base, y: 0 }, steps: [
         { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
         { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },
         { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },
-        { type: 'turn', to: ry, dur: spinDur(Math.abs(dd) * 180 / Math.PI) },
+        { type: 'turn', to: base, dur: 0.2 },   // dur re-resolved at run time from the ACTUAL angle (max spin speed)
         { type: 'move', to: { x: gw.x, z: gw.z }, dur: dur(Math.hypot(ttx - gw.x, ttz - gw.z)) } ] };
     }
     function pushMoves(tasks, trayFn, cellWorld, sol) {
@@ -1806,7 +1879,7 @@
       tasks.push(up, intakeDrive1(tgN, M.cellWorld[M.gateway], homeRy(tgN)));   // descend back to the gateway
       const backSol = route.slice().reverse().map(mv => ({ car: mv.car, from: mv.to, to: mv.from }));
       movesToTasks(M, backSol).forEach(t => tasks.push(t));     // reverse route: restore grid, park N at its cell
-      tasks.push(moveTask(M.carByNum[5], M.cellWorld[M.gateway].x, M.cellWorld[M.gateway].z, homeRy(M.carByNum[5])));
+      tasks.push(returnViaTurntable(M.carByNum[5], M.cellWorld[M.gateway].x, M.cellWorld[M.gateway].z, homeRy(M.carByNum[5])));
       tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + N + ' נקלט ✓'); };
       runTasks(tasks);
       flash('קליטת רכב ' + N + ' — ' + (route.length * 2) + ' הזזות');
@@ -1893,6 +1966,6 @@
     }
     requestAnimationFrame(animate);
   })();
-  </script>
+</script>
 </body>
 </html>
