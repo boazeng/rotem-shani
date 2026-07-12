@@ -97,6 +97,7 @@
       <label class="tog"><input type="checkbox" id="tGrass"> דשא (גג)</label><br>
       <label class="tog"><input type="checkbox" id="tCeil"> תקרת בטון</label><br>
       <label class="tog"><input type="checkbox" id="tCars" checked> רכבים</label><br>
+      <label class="tog"><input type="checkbox" id="tTrays" checked> משטחים</label><br>
       <label class="tog"><input type="checkbox" id="tGrid"> רשת</label>
     </div>
   </div>
@@ -381,6 +382,7 @@
       const g = new THREE.Group();
       const tray = new THREE.Mesh(new THREE.BoxGeometry(TRAY_L, TRAY_H, TRAY_W), trayMat);
       tray.position.y = TRAY_H / 2; tray.castShadow = true; tray.receiveShadow = true;
+      tray.userData.isTrayPlate = true;   // the platform slab (toggled by "משטחים")
       g.add(tray);
       const car = makeCar();
       car.position.y = TRAY_H;
@@ -861,6 +863,9 @@
     }
     document.getElementById('tCars').onchange = e => setCars(e.target.checked);
     document.getElementById('hidecars').onclick = () => setCars(!document.getElementById('tCars').checked);
+    document.getElementById('tTrays').onchange = e => {
+      trayGroups.forEach(g => g.children.forEach(c => { if (c.userData.isTrayPlate) c.visible = e.target.checked; }));
+    };
     document.getElementById('tGrid').onchange = e => grid.visible = e.target.checked;
 
     // apply the default view state (from the checkboxes above) on load
