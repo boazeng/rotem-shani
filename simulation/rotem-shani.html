@@ -592,15 +592,15 @@
       e1Group = g;
     }
 
-    // ============ P1 / P2 markers — the aisle spots directly in front of parking 14 and 20 ============
+    // ============ P23 / P24 markers — the aisle spots directly in front of parking 14 and 20 ============
     const pMarks = [];
     {
       const aisleZ = pz(7.9);   // the transfer/aisle row (same row as E1)
       const t14 = trayGroups.find(g => g.userData.num === 14);
       const t20 = trayGroups.find(g => g.userData.num === 20);
       const defs = [];
-      if (t14) defs.push({ text: 'P1', x: t14.position.x });   // facing parking 14
-      if (t20) defs.push({ text: 'P2', x: t20.position.x });   // facing parking 20
+      if (t14) defs.push({ text: 'P23', x: t14.position.x });   // facing parking 14
+      if (t20) defs.push({ text: 'P24', x: t20.position.x });   // facing parking 20
       const col = 0xffcf3f;   // amber (E1 is green)
       defs.forEach(d => {
         const g = new THREE.Group();
@@ -835,7 +835,7 @@
     document.getElementById('tNums').onchange = e => {
       numberLabels.forEach(l => l.visible = e.target.checked);
       if (e1Group) e1Group.visible = e.target.checked;   // hide the E1 marker together with the numbers
-      pMarks.forEach(g => g.visible = e.target.checked);  // ... and the P1/P2 markers
+      pMarks.forEach(g => g.visible = e.target.checked);  // ... and the P23/P24 markers
     };
     document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
     document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
