@@ -89,8 +89,8 @@
     </div>
     <div class="legend">
       <label class="tog"><input type="checkbox" id="tPlan"> שרטוט (DWG)</label><br>
-      <label class="tog"><input type="checkbox" id="tNums" checked> מספרי חניה</label><br>
-      <label class="tog"><input type="checkbox" id="tSpots" checked> חניות (P)</label><br>
+      <label class="tog"><input type="checkbox" id="tNums" checked> מספרי רכבים</label><br>
+      <label class="tog"><input type="checkbox" id="tSpots" checked> מספרי חניות</label><br>
       <label class="tog"><input type="checkbox" id="tCenters"> סימון מרכזים</label><br>
       <label class="tog"><input type="checkbox" id="tGuides"> קווי עזר</label><br>
       <label class="tog"><input type="checkbox" id="tDark" checked> חושך מוחלט (כיבוי אור סביבתי)</label><br>
@@ -862,13 +862,13 @@
     document.getElementById('dim').textContent = `${W.toFixed(1)}×${D.toFixed(1)} מ׳`;
     document.getElementById('ntray').textContent = trayGroups.length;
     document.getElementById('tPlan').onchange = e => { if (planMesh) planMesh.visible = e.target.checked; };
-    document.getElementById('tNums').onchange = e => {
+    document.getElementById('tNums').onchange = e => {   // green car numbers — travel with the cars
       numberLabels.forEach(l => l.visible = e.target.checked);
-      if (e1Group) e1Group.visible = e.target.checked;   // hide the E1 marker together with the numbers
     };
-    document.getElementById('tSpots').onchange = e => {   // fixed P spot labels (P1..P22) + aisle P23/P24
+    document.getElementById('tSpots').onchange = e => {   // fixed parking-spot numbers: P1..P22, aisle P23/P24, E1
       spotLabels.forEach(s => s.visible = e.target.checked);
       pMarks.forEach(g => g.visible = e.target.checked);
+      if (e1Group) e1Group.visible = e.target.checked;
     };
     document.getElementById('tCenters').onchange = e => centerMarkers.forEach(m => m.visible = e.target.checked);
     document.getElementById('tGuides').onchange = e => { if (e.target.checked) buildGuides(); guideLines.visible = e.target.checked; };
