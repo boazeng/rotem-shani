@@ -621,7 +621,10 @@
       ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 172; ctx.font = 'bold ' + fs + 'px Arial';
       while (ctx.measureText(text).width > 224 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
-      ctx.translate(128, 128); ctx.rotate(Math.PI); ctx.fillText(text, 0, 0);   // 180° so "top view" reads upright
+      ctx.translate(128, 128); ctx.rotate(Math.PI);   // 180° so "top view" reads upright
+      ctx.lineJoin = 'round'; ctx.lineWidth = 14; ctx.strokeStyle = 'rgba(12,16,26,0.9)';
+      ctx.strokeText(text, 0, 0);                      // dark outline -> readable on the beige turntable too (W1)
+      ctx.fillText(text, 0, 0);
       const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5),
         new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: !onTop }));
