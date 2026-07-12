@@ -470,7 +470,7 @@
       ctx.fillStyle = '#8dff9d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 200; ctx.font = 'bold ' + fs + 'px Arial';
       while (ctx.measureText(String(num)).width > 224 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
-      ctx.fillText(String(num), 128, 134);
+      ctx.translate(128, 128); ctx.rotate(Math.PI / 2); ctx.fillText(String(num), 0, 0);   // 90° for the hood
       const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
       return new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95),
         new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
@@ -621,7 +621,7 @@
       ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       let fs = 172; ctx.font = 'bold ' + fs + 'px Arial';
       while (ctx.measureText(text).width > 232 && fs > 40) { fs -= 8; ctx.font = 'bold ' + fs + 'px Arial'; }
-      ctx.fillText(text, 128, 134);
+      ctx.translate(128, 128); ctx.rotate(Math.PI); ctx.fillText(text, 0, 0);   // 180° so "top view" reads upright
       const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5),
         new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
