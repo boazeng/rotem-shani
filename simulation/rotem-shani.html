@@ -1648,34 +1648,21 @@
           cells.forEach(k => { const d = Math.hypot(g.position.x - M.cellWorld[k].x, g.position.z - M.cellWorld[k].z); if (d < bd) { bd = d; best = k; } });
           board[best] = n;
         });
-        // PER-COLUMN target: only T's column compacts (cars back, empties incl. T to front); other columns
-        // keep their pre-exit arrangement; A0 stays the blank. Works when T's exit stayed within its column
-        // + the aisle (columns 0 and 1). Column 2 has no aisle cell, so its exit must cross column 1 and the
-        // restore becomes unreachable -> we fall back to a GLOBAL pack (empties cluster at the aisle-front).
-        const col = parseInt(cellT.split(',')[0], 10);
-        const cc = B2COL[col];
-        let frontCell = cc[cc.length - 1], target2 = null, repack = null;
-        // per-column only when the column's front cell is reachable from A0 in one slide (columns 0 & 1). Otherwise
-        // the returning empty tray would have to shove cars aside to reach it, so we use the global pack instead.
-        if (M.neighbors(A0).includes(frontCell)) {
-          const occ = cc.map(k => preBoard[k]).filter(v => v && v !== T);
-          const cars = occ.filter(n => !isEmptySpot(M.tray(n)));
-          const emps = occ.filter(n => isEmptySpot(M.tray(n)));
-          const ordered = cars.concat(emps, [T]);   // back -> front, T front-most
-          const target = {}; cells.forEach(k => target[k] = preBoard[k] || 0);
-          target[A0] = 0;
-          cc.forEach((k, i) => target[k] = ordered[i] || 0);
-          target2 = Object.assign({}, target); target2[frontCell] = 0;   // T absent -> its front cell reserved
-          repack = solveToBoard(board, cells, M.neighbors, target2, b2StateValid);
-        }
-        if (!repack) {                                           // fall back to a global aisle-front pack
-          const park = M.park; frontCell = park[0];
-          const present = park.map(k => board[k]).filter(v => v !== 0);
-          const gEmp = present.filter(n => isEmptySpot(M.tray(n))), gCars = present.filter(n => !isEmptySpot(M.tray(n)));
-          const g2 = {}; cells.forEach(k => g2[k] = 0); const slots = park.slice(1);
-          gEmp.concat(gCars).forEach((n, i) => g2[slots[i]] = n);
-          target2 = g2; repack = solveToBoard(board, cells, M.neighbors, target2, b2StateValid);
-        }
+        // Return target — xlsx 'limitation' (E1<->P23, E1<->P24): pack all present trays into the 9 GRID cells
+        // with BOTH aisle spots (P23/P24) left EMPTY, so when T drives back through E1 into A0 the aisle lane is
+        // clear (no E1<->aisle collision). T then slides from A0 to the front grid cell, pushing the unavoidable
+        // 10th tray into an aisle spot AFTER the transit — a plain slide, no E1 move, so it just rests there.
+        // (Replaces the old per-column pack, which restored the pre-exit board and left a tray sitting at P23
+        //  right when the returning tray passed E1 — the reported car-19 collision.)
+        void cellT;   // T's column no longer needed: the pack is global-but-aisle-clear
+        const gridPark = M.park.filter(k => !B2AISLE.has(k));   // grid cells only, front -> back
+        const frontCell = gridPark[0];
+        const present = gridPark.concat([M.A0, M.A1]).map(k => board[k]).filter(v => v && v !== T);
+        const emps = present.filter(n => isEmptySpot(M.tray(n))), cars = present.filter(n => !isEmptySpot(M.tray(n)));
+        const ordered = emps.concat(cars);                      // empty trays toward the front
+        const target2 = {}; cells.forEach(k => target2[k] = 0);
+        gridPark.forEach((k, i) => { if (ordered[i]) target2[k] = ordered[i]; });   // fill grid; aisle stays empty
+        const repack = solveToBoard(board, cells, M.neighbors, target2, b2StateValid);
         const tasks = repack ? movesToTasks(M, repack) : [];
         // T descends, returns through E1 to A0, then slides into its column's FRONT cell
         tasks.push(intakeDrive2(tgT, M.cellWorld[A0], homeRy(tgT)));
