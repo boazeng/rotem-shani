@@ -12,6 +12,7 @@
 | [ALGORITHMS.md](ALGORITHMS.md) | **אלגוריתמי החילוץ** — בלוק 1, בלוק 2, פותר חידת-15, מסלולי יציאה |
 | [FRONTPACKING.md](FRONTPACKING.md) | **דחיסה קדמית, קליטה ובור המעלית** — מה נעשה בסבב זה + מה נשאר להשלים |
 | [PIPELINE.md](PIPELINE.md) | **צנרת הבנייה** — איך נבנתה הסימולציה מ-DWG, הוספת מודלי רכב |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | **פריסה ל-AWS** — S3+CloudFront, הכתובת החיה, ופריסה אוטומטית בכל push |
 
 ## מה זה הפרויקט
 
