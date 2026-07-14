@@ -231,8 +231,8 @@
 
     // ---------- scene ----------
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0e1a);
-    scene.fog = new THREE.Fog(0x0a0e1a, 60, 220);
+    scene.background = new THREE.Color(0x2a3752);
+    scene.fog = new THREE.Fog(0x2a3752, 60, 220);   // dusk-blue sky/void so outside reads lit even in full-dark mode
 
     const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('app'), antialias: true });
@@ -889,8 +889,8 @@
       const earthMesh = new THREE.Mesh(earthGeo,
         // self-lit (emissive) like the roof — so the ground OUTSIDE the pit stays lit even in "full dark" mode,
         // which is interior-only. "חושך מוחלט" darkens the facility inside; the surroundings keep their daylight.
-        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0, side: THREE.DoubleSide,
-          emissive: 0x6b5638, emissiveIntensity: 0.7 }));
+        new THREE.MeshStandardMaterial({ color: 0x8a7048, roughness: 1.0, side: THREE.DoubleSide,
+          emissive: 0x8a7048, emissiveIntensity: 1.1 }));
       earthMesh.position.y = -0.05;
       earthMesh.receiveShadow = true;
       scene.add(earthMesh);
@@ -982,7 +982,7 @@
       key.intensity = on ? 0 : 0.25;
       // cars are also lit by their reflection (env) map, independent of scene lights -> kill it too
       carGroup.traverse(o => { if (o.isMesh && o.material && o.material.envMap) o.material.envMapIntensity = on ? 0 : 0.8; });
-      scene.background.set(0x0a0e1a);   // keep the sky/void lit — "full dark" affects only the facility interior
+      scene.background.set(0x2a3752);   // keep the sky/void lit (dusk blue) — "full dark" affects only the interior
     }
     document.getElementById('tDark').onchange = applyDark;
     // fluorescents off: hiding the group also skips its child point lights during render
