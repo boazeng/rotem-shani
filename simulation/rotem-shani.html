@@ -1221,8 +1221,10 @@
     function settleClean() {
       initialState.forEach(s => {
         if (!s.g || !s.g.userData || !s.g.userData.isTray) return;
-        const num = s.g.userData.num;                                     // BLOCK2 trays 12-21, BLOCK1 trays 2-11,22
-        if (B2ANCHORS && num >= 12 && num <= 21) snapToAnchors(s.g, s.y, s.ry, B2ANCHORS, B2CELLS);
+        const num = s.g.userData.num;                                     // BLOCK2 grid 12-20, BLOCK1 trays 2-11,22
+        // car 21 is the aisle helper: it rests at its P21 spur (its saved home), NOT snapped to a grid/aisle
+        // anchor — snapping it to A1 would leave a tray at P23 and break the E1 aisle-clear invariant.
+        if (B2ANCHORS && num >= 12 && num <= 20) snapToAnchors(s.g, s.y, s.ry, B2ANCHORS, B2CELLS);
         else if (B1ANCHORS && BLOCK1.has(num)) snapToAnchors(s.g, s.y, s.ry, B1ANCHORS, Object.keys(B1ANCHORS));
         else { s.g.position.set(s.x, s.y, s.z); s.g.rotation.y = s.ry; }
       });
@@ -1669,6 +1671,19 @@
         const retStart = Object.assign({}, target2); retStart[A0] = T;
         const retSol = solvePuzzle(retStart, cells, M.neighbors, frontCell, T, null, b2StateValid);
         (retSol ? movesToTasks(M, retSol) : [movesToTasks(M, [{ car: T, from: A0, to: frontCell }])[0]]).forEach(t => tasks.push(t));
+        // Park the helper car 21 back at its home spur P21 so the E1 aisle (P23/P24) ends up EMPTY at rest.
+        // Otherwise a following BLOCK-1 exit (car 5 -> W1 -> E1) coincides with a tray sitting at P23 — the
+        // cross-block E1<->P23 collision (xlsx limitation). Slide car 21 to aisle cell A1 (keeping A0 clear
+        // too), then it drives out east to the P21 spur, off the E1 lane.
+        const postRet = Object.assign({}, retStart); (retSol || []).forEach(m => { postRet[m.to] = m.car; postRet[m.from] = 0; });
+        const c21 = M.tray(21);
+        if (c21) {
+          const bring = solvePuzzle(postRet, cells, M.neighbors, M.A1, 21, b => b[M.A0] === 0, b2StateValid);
+          if (bring) movesToTasks(M, bring).forEach(t => tasks.push(t));
+          const hp = homePos(c21), a1w = M.cellWorld[M.A1];
+          tasks.push({ tray: c21, end: { x: hp.x, z: hp.z, ry: homeRy(c21) },
+            steps: [{ type: 'move', to: { x: hp.x, z: hp.z }, dur: dur(Math.hypot(a1w.x - hp.x, a1w.z - hp.z)) }] });
+        }
         tasks[tasks.length - 1].onDone = () => { settleClean(); flash('רכב ' + T + ' יצא — הטור נדחס, מגש ריק בחזית ✓'); };
         if (!runTasks(tasks)) { settleClean(); }
       });
@@ -1845,6 +1860,8 @@
     }
     // the rotation a tray rests at in its block (its canonical/home orientation)
     const homeRy = tg => { const s = initialState.find(x => x.g === tg); return s ? s.ry : tg.rotation.y; };
+    // saved canonical home position of a tray (e.g. car 21's P21 spur, east of the aisle) — used to park it home.
+    const homePos = tg => { const s = initialState.find(x => x.g === tg); return s ? { x: s.x, z: s.z } : { x: tg.position.x, z: tg.position.z }; };
     // an empty tray rises to the lift EMPTY — using the SAME orderly maneuver as extracting a car (cell -> (E1)
     // -> turntable -> align -> into the lift -> rise), just with the car hidden. The car boards at the top.
     function intakePrelude(tg, viaE1) {
