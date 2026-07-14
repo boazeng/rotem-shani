@@ -16,3 +16,8 @@ Thumbs.db
 scratch_*.png
 *.backup.json
 *.backup2.json
+
+# Server secrets & data (never commit)
+server/.env
+database/
+*.db

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>עמוד מנהל — רותם שני</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap');
+    :root{--primary:#1F3A5F;--accent:#D64A2E;--pos:#2F8F5B;--bg:#FAF9F5;--white:#FFFEFB;--text:#2A2A28;--muted:#706A60;--border:#E7E2D6}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Heebo',Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .bar{display:flex;align-items:center;gap:18px;height:64px;padding:0 24px;background:var(--white);border-bottom:1px solid var(--border)}
+    .logo{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.2rem;direction:ltr}
+    .logo b{color:var(--accent)}
+    .nav{display:flex;gap:4px;margin-inline-start:auto}
+    .nav a{padding:8px 15px;border-radius:999px;font-size:.9rem;font-weight:500;color:var(--muted)}
+    .nav a:hover{background:rgba(31,58,95,.12);color:var(--primary)}
+    .nav a.out{color:var(--accent)}
+    .wrap{max-width:820px;margin:48px auto;padding:0 24px}
+    .lock{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;color:var(--accent);
+      background:rgba(214,74,46,.1);padding:5px 14px;border-radius:999px;margin-bottom:16px}
+    h1{font-size:2rem;font-weight:800;color:var(--primary);margin-bottom:8px}
+    p{color:var(--muted);font-size:1.05rem}
+    .who{margin-top:22px;padding:16px 20px;background:var(--white);border:1px solid var(--border);border-radius:14px}
+    .who b{font-family:'Space Grotesk',sans-serif;color:var(--primary)}
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <span class="logo">T<b>·</b>A<b>·</b>C<b>·</b>T</span>
+    <nav class="nav">
+      <a href="/sim/rotem-shani.html">סימולציה</a>
+      <a href="/manage">ניהול מערכת</a>
+      <a href="/logout" class="out">יציאה</a>
+    </nav>
+  </header>
+  <main class="wrap">
+    <span class="lock">🔒 מנהל מערכת בלבד</span>
+    <h1>עמוד מנהל</h1>
+    <p>העמוד הזה נגיש רק למי שתפקידו <b>admin</b>. משתמשים אחרים (approver / user) יקבלו שגיאת 403.</p>
+    <div class="who">מחובר כ־<b>{{EMAIL}}</b> · role: admin</div>
+  </main>
+</body>
+</html>

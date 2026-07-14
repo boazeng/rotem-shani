@@ -1,0 +1,9 @@
+# Rotem Shani — parking app server (FastAPI + shared-auth Google sign-in)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+itsdangerous>=2.1
+python-dotenv>=1.0
+# shared-auth: the reusable Google OAuth + roles module (installed from the sibling repo)
+#   local dev:  pip install -e ../../shared-auth
+#   on server:  pip install "git+https://github.com/boazeng/shared-auth.git"
