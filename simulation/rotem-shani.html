@@ -1730,15 +1730,6 @@
         { type: 'move', to: { x: destx, z: destz }, dur: dur(Math.hypot(ttx - destx, ttz - destz)) } ] };
     }
 
-    // when an extracted car reaches the lift: after 3s it leaves (car hidden, spot freed), grid settles clean
-    function scheduleExit(tg, num) {
-      return () => delay(3, () => {
-        const c = trayCar(tg); if (c) c.visible = false;
-        tg.userData.empty = true;
-        settleClean();
-        flash('רכב ' + num + ' יצא מהמתקן ✓');
-      });
-    }
     // convert a solved sliding-puzzle move list into tasks WITH a direction, so the scenario engine can CONVOY
     // them: a row of trays all shifting the SAME way follow each other staggered by CFG.gap instead of each
     // waiting for the one ahead to finish. Safe because puzzle moves chain through the blank (to[i+1] == from[i]),
@@ -1849,6 +1840,22 @@
       });
     }
 
+    // BLOCK-1 direct exit of the GATEWAY car (5): after it boards the lift and vanishes, the freed EMPTY tray
+    // must DESCEND and drive back the orderly way (lift -> W1 -> gateway) — exactly like every other car — instead
+    // of snapping straight into the grid. Nothing else moved on a direct exit, so there is no re-pack; the empty
+    // tray simply returns to the gateway it came from.
+    function scheduleExit5(tg5) {
+      return () => delay(3, () => {
+        const c = trayCar(tg5); if (c) c.visible = false;
+        tg5.userData.empty = true;
+        const M = blockModel();
+        if (!M) { settleClean(); flash('רכב 5 יצא מהמתקן ✓'); return; }
+        const back = intakeDrive1(tg5, M.cellWorld[M.gateway], homeRy(tg5));   // descend -> W1 -> gateway
+        back.onDone = () => { settleClean(); flash('רכב 5 יצא — מגש ריק חזר לשער דרך W1 ✓'); };
+        if (!runTasks([back])) { settleClean(); }
+      });
+    }
+
     function extractFromBlock1(T) {
       if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (!turntableGroup) { flash('אין צלחת סיבוב'); return; }
@@ -1856,7 +1863,7 @@
       if (!M) { flash('בלוק 1 לא זוהה'); return; }
       if (!M.carByNum[T]) { flash('רכב ' + T + ' לא בבלוק 1'); return; }
       const tasks = [];
-      if (T === 5) { const ex = fullExit(M.carByNum[5]); ex.onDone = scheduleExit(M.carByNum[5], 5); runTasks([ex]); flash('חילוץ רכב 5'); return; }
+      if (T === 5) { const ex = fullExit(M.carByNum[5]); ex.onDone = scheduleExit5(M.carByNum[5]); runTasks([ex]); flash('חילוץ רכב 5'); return; }
       tasks.push(outToE1(M.carByNum[5]));                 // free the gateway
       const board = {};
       M.cells.forEach(k => board[k] = M.numByCell[k]);
