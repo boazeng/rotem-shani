@@ -79,9 +79,9 @@
         <input id="newEmail" type="email" placeholder="אימייל (Gmail) חדש…" />
         <input id="newName" type="text" placeholder="שם (אופציונלי)" />
         <select id="newRole">
-          <option value="user">user — צפייה</option>
-          <option value="approver">approver — מאשר</option>
-          <option value="admin">admin — מנהל</option>
+          <option value="user">לקוח — צפייה בלבד</option>
+          <option value="approver">משתמש — הפעלת הסימולציה</option>
+          <option value="admin">מפתח על — שליטה מלאה</option>
         </select>
         <button class="btn btn-p" onclick="addUser()">+ הוסף משתמש</button>
       </div>
@@ -100,7 +100,10 @@
     let ME = null;
     const $ = s => document.querySelector(s);
     function msg(t, ok){ const m=$('#msg'); m.textContent=t; m.className = ok?'ok':'err'; if(t) setTimeout(()=>{if(m.textContent===t){m.textContent='';m.className='';}}, 4000); }
-    const roleBadge = r => `<span class="badge b-${r}">${r}</span>`;
+    // the 3 profiles (Hebrew labels) map onto shared_auth's fixed internal roles admin/approver/user
+    const ROLE_LABEL = { admin:'מפתח על', approver:'משתמש', user:'לקוח' };
+    const roleLabel = r => ROLE_LABEL[r] || r;
+    const roleBadge = r => `<span class="badge b-${r}">${roleLabel(r)}</span>`;
     const fmtDate = s => s ? new Date(s.replace(' ','T')+'Z').toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}) : '—';
 
     async function api(url, opts){
@@ -112,7 +115,7 @@
 
     async function load(){
       const me = await api('/auth/me'); ME = me;
-      $('#whoami').textContent = me.email ? `מחובר: ${me.email} (${me.role})` : '';
+      $('#whoami').textContent = me.email ? `מחובר: ${me.email} (${roleLabel(me.role)})` : '';
       const { users, roles } = await api('/auth/users');
       $('#count').textContent = users.length + ' משתמשים';
       $('#rows').innerHTML = users.map(u => rowHtml(u, roles)).join('');
@@ -121,7 +124,7 @@
     function rowHtml(u, roles){
       const self = ME && u.email === ME.email;
       const roleSel = `<select onchange="setRole('${u.email}', this.value)" ${self?'disabled':''}>`+
-        roles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join('')+`</select>`;
+        roles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${roleLabel(r)}</option>`).join('')+`</select>`;
       const activeBtn = `<button class="btn btn-g" onclick="toggleActive('${u.email}', ${u.active?0:1})" ${self?'disabled':''}>`+
         (u.active?'השבת':'הפעל')+`</button>`;
       const delBtn = self?'' : `<button class="btn btn-d" onclick="delUser('${u.email}')">מחק</button>`;

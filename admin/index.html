@@ -119,7 +119,7 @@
         <button data-soon>רכבים</button>
         <button data-soon>חילוץ / קליטה</button>
         <button data-soon>דוחות</button>
-        <button data-soon>הגדרות</button>
+        <button id="navSettings">הגדרות</button>
       </nav>
 
       <a class="tact-btn tact-btn-primary" style="padding:9px 18px;" target="_blank"
@@ -315,8 +315,10 @@
     render();
     document.querySelector('#q').addEventListener('input', e => render(e.target.value.trim()));
 
-    // nav placeholders + toast
-    document.querySelectorAll('.tact-nav button').forEach(b => {
+    // הגדרות -> ניהול משתמשים (3 פרופילים: מפתח על / משתמש / לקוח)
+    document.getElementById('navSettings').addEventListener('click', () => location.href = '/manage');
+    // remaining nav placeholders + toast
+    document.querySelectorAll('.tact-nav button[data-soon]').forEach(b => {
       b.addEventListener('click', () => {
         if(b.classList.contains('active')) return;
         toast(b.textContent.trim() + ' — בקרוב');
