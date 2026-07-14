@@ -768,11 +768,15 @@
     if (liftSrc) {
       const lg = new THREE.Group();
       const plat = new THREE.Mesh(new THREE.BoxGeometry(TRAY_L + 0.4, 0.2, TRAY_W + 0.5),
-        new THREE.MeshStandardMaterial({ color: 0x6e1f2e, roughness: 0.88, metalness: 0.05 }));   // burgundy, matte (not glossy)
+        // burgundy, matte, and self-lit (emissive) so the platform stays clearly visible even in full-dark
+        // mode when the lift sits far from the fluorescents (it was reading too dark to see).
+        new THREE.MeshStandardMaterial({ color: 0x6e1f2e, roughness: 0.88, metalness: 0.05,
+          emissive: 0x6e1f2e, emissiveIntensity: 0.75 }));
       plat.position.y = LIFT_PLAT_Y;
       liftPlatform = plat;                        // only the platform rises; posts stay fixed
       lg.add(plat);
-      const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6 });
+      const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6,
+        emissive: 0x2f6f9a, emissiveIntensity: 0.5 });   // posts glow a little so the lift is easy to spot
       const POSTH = H;   // posts span the floor to the ground/roof level (not above it)
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
         const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, POSTH, 0.14), postMat);
@@ -1169,7 +1173,7 @@
     function topView() {
       target.set(0, 0, 0);
       phi = 0.05; theta = -Math.PI / 2;
-      radius = Math.max(W, D) * 1.25;
+      radius = Math.max(W, D) * 1.6;   // zoom out enough to frame the whole facility with margin
       applyCam();
     }
     document.getElementById('save').onclick = saveLayout;
@@ -1256,7 +1260,7 @@
         target.z + radius * Math.sin(phi) * Math.sin(theta));
       camera.lookAt(target);
     }
-    applyCam();
+    topView();   // start in top-down view, framed to fit the whole facility with margin
     let drag = null, lastX = 0, lastY = 0;
     const el = renderer.domElement;
     el.addEventListener('mousedown', e => {
