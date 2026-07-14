@@ -887,7 +887,10 @@
       if (liftHole) earthShape.holes.push(liftHole());
       const earthGeo = new THREE.ShapeGeometry(earthShape); earthGeo.rotateX(-Math.PI / 2);
       const earthMesh = new THREE.Mesh(earthGeo,
-        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0, side: THREE.DoubleSide }));
+        // self-lit (emissive) like the roof — so the ground OUTSIDE the pit stays lit even in "full dark" mode,
+        // which is interior-only. "חושך מוחלט" darkens the facility inside; the surroundings keep their daylight.
+        new THREE.MeshStandardMaterial({ color: 0x6b5638, roughness: 1.0, side: THREE.DoubleSide,
+          emissive: 0x6b5638, emissiveIntensity: 0.7 }));
       earthMesh.position.y = -0.05;
       earthMesh.receiveShadow = true;
       scene.add(earthMesh);
@@ -979,7 +982,7 @@
       key.intensity = on ? 0 : 0.25;
       // cars are also lit by their reflection (env) map, independent of scene lights -> kill it too
       carGroup.traverse(o => { if (o.isMesh && o.material && o.material.envMap) o.material.envMapIntensity = on ? 0 : 0.8; });
-      scene.background.set(on ? 0x000000 : 0x0a0e1a);
+      scene.background.set(0x0a0e1a);   // keep the sky/void lit — "full dark" affects only the facility interior
     }
     document.getElementById('tDark').onchange = applyDark;
     // fluorescents off: hiding the group also skips its child point lights during render
