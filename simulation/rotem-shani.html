@@ -180,6 +180,7 @@
       <label class="tog"><input type="checkbox" id="tCeil"> תקרת בטון</label><br>
       <label class="tog"><input type="checkbox" id="tCars" checked> רכבים</label><br>
       <label class="tog"><input type="checkbox" id="tTrays" checked> משטחים</label><br>
+      <label class="tog"><input type="checkbox" id="tFloor" checked> רצפת מתקן</label><br>
       <label class="tog"><input type="checkbox" id="tGrid"> רשת</label>
     </div>
   </div>
@@ -1023,9 +1024,11 @@
       trayGroups.forEach(g => g.children.forEach(c => { if (c.userData.isTrayPlate) c.visible = e.target.checked; }));
     };
     document.getElementById('tGrid').onchange = e => grid.visible = e.target.checked;
+    // facility floor slab — toggle off to check whether it hides the lift / pit below
+    document.getElementById('tFloor').onchange = e => { floor.visible = e.target.checked; };
 
     // apply the default view state (from the checkboxes above) on load
-    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tGrass', 'tCars', 'tGrid', 'tDark', 'tFluor'].forEach(id => {
+    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tGrass', 'tCars', 'tGrid', 'tDark', 'tFluor', 'tFloor'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.onchange) el.onchange({ target: el });
     });
