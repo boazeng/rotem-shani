@@ -643,6 +643,9 @@
           const car = tmpl.clone(true);
           car.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
           car.userData.modelFlip = !!MODEL_FILES[key].flip;
+          // car 1 parks facing the LIFT (opposite the east-ward default that eastFace() forces on every car).
+          // This is a PER-TRAY flip so it doesn't affect car 12, which shares the barracuda model.
+          if (num === 1) car.userData.modelFlip = !car.userData.modelFlip;
           setTrayCar(tg, car);
         });
       });
