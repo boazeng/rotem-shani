@@ -370,7 +370,7 @@
 
     // ============ TRAYS + CARS ============
     const TRAY_L = 5.05, TRAY_W = 2.15, TRAY_H = 0.18;
-    const trayMat = new THREE.MeshStandardMaterial({ color: 0x3d5a80, roughness: 0.6, metalness: 0.3 });
+    const trayMat = new THREE.MeshStandardMaterial({ color: 0x9cc3e8, roughness: 0.92, metalness: 0.0 });   // light blue, matte (not glossy)
     const carBodyMat = new THREE.MeshStandardMaterial({ color: 0xc9d4e0, roughness: 0.4, metalness: 0.2 });
     const carGlassMat = new THREE.MeshStandardMaterial({ color: 0x223044, roughness: 0.2, metalness: 0.5 });
     const carGroup = new THREE.Group();
@@ -767,7 +767,7 @@
     if (liftSrc) {
       const lg = new THREE.Group();
       const plat = new THREE.Mesh(new THREE.BoxGeometry(TRAY_L + 0.4, 0.2, TRAY_W + 0.5),
-        new THREE.MeshStandardMaterial({ color: 0x2a4a6a, roughness: 0.5, metalness: 0.4 }));
+        new THREE.MeshStandardMaterial({ color: 0x6e1f2e, roughness: 0.88, metalness: 0.05 }));   // burgundy, matte (not glossy)
       plat.position.y = LIFT_PLAT_Y;
       liftPlatform = plat;                        // only the platform rises; posts stay fixed
       lg.add(plat);
