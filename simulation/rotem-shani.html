@@ -772,7 +772,7 @@
         // burgundy, matte, and self-lit (emissive) so the platform stays clearly visible even in full-dark
         // mode when the lift sits far from the fluorescents (it was reading too dark to see).
         new THREE.MeshStandardMaterial({ color: 0x6e1f2e, roughness: 0.88, metalness: 0.05,
-          emissive: 0x6e1f2e, emissiveIntensity: 0.75 }));
+          emissive: 0x6e1f2e, emissiveIntensity: 0.2 }));   // low self-glow; the light above does the real lighting
       plat.position.y = LIFT_PLAT_Y;
       liftPlatform = plat;                        // only the platform rises; posts stay fixed
       lg.add(plat);
@@ -784,6 +784,11 @@
         p.position.set(sx * (TRAY_L + 0.4) / 2, POSTH / 2, sz * (TRAY_W + 0.5) / 2);
         lg.add(p);
       });
+      // a fluorescent-style light directly above the lift (no visible fixture) so the platform is always well-lit
+      // and clearly visible, even when the lift sits far from the ceiling fluorescents.
+      const liftLight = new THREE.PointLight(0xf4f8ff, 1.35, 22, 1.2);
+      liftLight.position.set(0, H + 1.0, 0);
+      lg.add(liftLight);
       plat.add(makeCenterMarker(0.14));          // mark the lift center; on the platform so it rises with the car
       lg.position.set(px(liftSrc.pos[0]), 0, pz(liftSrc.pos[1]));
       lg.rotation.y = -liftSrc.rot * Math.PI / 180;
@@ -2130,19 +2135,6 @@
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       renderer.setSize(innerWidth, innerHeight);
     });
-    // wall cutaway: fade any wall that sits between the camera and the facility centre, so the interior
-    // (the lift, trays, cars) stays visible from any angle. Walls beyond the centre stay solid.
-    const _wp = new THREE.Vector3();
-    function updateWallCutaway() {
-      const camToTarget = camera.position.distanceTo(target);
-      for (const m of fadeWalls) {
-        m.getWorldPosition(_wp);
-        const front = camera.position.distanceTo(_wp) < camToTarget - 2.0;
-        const mat = m.material;
-        if (mat.transparent !== front) { mat.transparent = front; mat.depthWrite = !front; mat.needsUpdate = true; }
-        mat.opacity = front ? 0.12 : 1;
-      }
-    }
     let lastT = 0;
     function animate(t) {
       requestAnimationFrame(animate);
@@ -2151,7 +2143,6 @@
       lastT = t;
       if (!paused) stepScenario(dt);
       if (boxHelper) boxHelper.update();
-      updateWallCutaway();
       drawCompass();
       renderer.render(scene, camera);
     }
