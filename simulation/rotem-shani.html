@@ -325,17 +325,18 @@
     // emissive grey so the facility's OUTER wall face reads as concrete-grey (not black) in full-dark mode
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x646973, roughness: 0.95, emissive: 0x767b85, emissiveIntensity: 0.8 });
     const wallGrp = new THREE.Group();
+    const fadeWalls = [];   // walls fade out when they sit between the camera and the interior (cutaway view)
     const T = 0.25;
     for (let i = 0; i < shapePts.length; i++) {
       const a = shapePts[i], b = shapePts[(i + 1) % shapePts.length];
       const dx = b.x - a.x, dz = b.y - a.y;
       const len = Math.hypot(dx, dz);
       const g = new THREE.BoxGeometry(len + T, H, T);
-      const m = new THREE.Mesh(g, wallMat);
+      const m = new THREE.Mesh(g, wallMat.clone());   // own material so each wall can fade independently
       m.position.set((a.x + b.x) / 2, H / 2, (a.y + b.y) / 2);
       m.rotation.y = -Math.atan2(dz, dx);
       m.castShadow = true; m.receiveShadow = true;
-      wallGrp.add(m);
+      wallGrp.add(m); fadeWalls.push(m);
     }
     scene.add(wallGrp);
 
@@ -735,9 +736,9 @@
     const WALL_T = 0.2;
     function buildWall(eastNorth, rotDeg, len) {
       const g = new THREE.Group();
-      const m = new THREE.Mesh(new THREE.BoxGeometry(len, H, WALL_T), wallUserMat);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(len, H, WALL_T), wallUserMat.clone());
       m.position.y = H / 2; m.castShadow = true; m.receiveShadow = true;
-      g.add(m);
+      g.add(m); fadeWalls.push(m);
       g.position.set(px(eastNorth[0]), 0, pz(eastNorth[1]));
       g.rotation.y = -rotDeg * Math.PI / 180;
       g.userData.isWall = true;
@@ -808,12 +809,7 @@
         // ShapeGeometry/ExtrudeGeometry + rotateX(-PI/2) map shape.y -> world -Z, so negate Z to land the hole
         // on the lift's real world position (the bbox is ~symmetric in Z, which is why floor/grass looked fine).
         liftHole = () => new THREE.Path(cn.map(c => new THREE.Vector2(c[0], -c[1])));
-        // TEST: a MUCH larger opening in the ground-floor roof (concrete ceiling + grass) over the lift, to check
-        // whether a ground-level surface is what hides the lift when viewed from the top.
-        const RL = (TRAY_L + 0.4) / 2 + 2.0, RW = (TRAY_W + 0.5) / 2 + 2.0;
-        const rcn = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([sx, sz]) =>
-          [lx + sx * RL * ux + sz * RW * vx, lz + sx * RL * uz + sz * RW * vz]);
-        roofHole = () => new THREE.Path(rcn.map(c => new THREE.Vector2(c[0], -c[1])));
+        roofHole = liftHole;   // (roof opening = same as the floor opening; the roof was ruled out as the occluder)
         // dig a shallow PIT under the lift: cut the garage floor here so the lowered platform (top at y=0)
         // drops into a lined recess, and a boarding tray sits flush on the platform instead of inside it.
         { const fShape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.y)));
@@ -2134,6 +2130,19 @@
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       renderer.setSize(innerWidth, innerHeight);
     });
+    // wall cutaway: fade any wall that sits between the camera and the facility centre, so the interior
+    // (the lift, trays, cars) stays visible from any angle. Walls beyond the centre stay solid.
+    const _wp = new THREE.Vector3();
+    function updateWallCutaway() {
+      const camToTarget = camera.position.distanceTo(target);
+      for (const m of fadeWalls) {
+        m.getWorldPosition(_wp);
+        const front = camera.position.distanceTo(_wp) < camToTarget - 2.0;
+        const mat = m.material;
+        if (mat.transparent !== front) { mat.transparent = front; mat.depthWrite = !front; mat.needsUpdate = true; }
+        mat.opacity = front ? 0.12 : 1;
+      }
+    }
     let lastT = 0;
     function animate(t) {
       requestAnimationFrame(animate);
@@ -2142,6 +2151,7 @@
       lastT = t;
       if (!paused) stepScenario(dt);
       if (boxHelper) boxHelper.update();
+      updateWallCutaway();
       drawCompass();
       renderer.render(scene, camera);
     }
