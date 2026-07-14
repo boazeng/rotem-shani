@@ -809,7 +809,10 @@
       let liftHole = null, roofHole = null;
       if (liftGroup) {
         const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
-        const hl = (TRAY_L + 0.4) / 2 + 0.5, hw = (TRAY_W + 0.5) / 2 + 0.5;   // open margin around the platform so it isn't hidden by the floor
+        // hole margin kept small (0.1) so the whole opening stays INSIDE the outline: the lift sits near the
+        // west wall, and a bigger hole pushed a corner outside the polygon — then ShapeGeometry silently fails to
+        // cut it and the solid floor hides the pit (the reported bug). 0.1 still reveals the full platform.
+        const hl = (TRAY_L + 0.4) / 2 + 0.1, hw = (TRAY_W + 0.5) / 2 + 0.1;
         const ux = Math.cos(lry), uz = -Math.sin(lry);
         const vx = Math.sin(lry), vz = Math.cos(lry);
         const cn = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([sx, sz]) =>
