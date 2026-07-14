@@ -765,6 +765,7 @@
     let liftGroup = null, liftPlatform = null;
     const LIFT_PLAT_Y = -0.1;   // platform is 0.2 thick -> its TOP rests at y=0 (the tray's base), so a tray
                                 // boarding it sits flush ON it (not swallowed). It drops into a pit (below).
+    const LIFT_REST_Y = LIFT_PLAT_Y + 0.5;   // at init/reset the empty platform sits 0.5m PROUD of the floor so it's clearly visible
     const liftSrc = (savedLayout && savedLayout.lift) ? savedLayout.lift : L.lift;
     if (liftSrc) {
       const lg = new THREE.Group();
@@ -773,7 +774,7 @@
         // mode when the lift sits far from the fluorescents (it was reading too dark to see).
         new THREE.MeshStandardMaterial({ color: 0x6e1f2e, roughness: 0.88, metalness: 0.05,
           emissive: 0x6e1f2e, emissiveIntensity: 0.2 }));   // low self-glow; the light above does the real lighting
-      plat.position.y = LIFT_PLAT_Y;
+      plat.position.y = LIFT_REST_Y;
       liftPlatform = plat;                        // only the platform rises; posts stay fixed
       lg.add(plat);
       const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6,
@@ -1362,7 +1363,7 @@
         else if (B1ANCHORS && BLOCK1.has(num)) snapToAnchors(s.g, s.y, s.ry, B1ANCHORS, Object.keys(B1ANCHORS));
         else { s.g.position.set(s.x, s.y, s.z); s.g.rotation.y = s.ry; }
       });
-      if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;
+      if (liftPlatform) liftPlatform.position.y = LIFT_REST_Y;
       if (boxHelper) boxHelper.update();
     }
     // snapshot of every movable's transform -> "reset simulation" restores it.
@@ -1381,7 +1382,7 @@
       });
       // restore full occupancy: every tray gets its car back (undo exit "disappear")
       trayGroups.forEach(tg => { tg.userData.empty = false; const c = trayCar(tg); if (c) c.visible = document.getElementById('tCars').checked; });
-      if (liftPlatform) liftPlatform.position.y = LIFT_PLAT_Y;   // lift platform back down
+      if (liftPlatform) liftPlatform.position.y = LIFT_REST_Y;   // lift platform back to its raised rest position
       if (boxHelper) boxHelper.update();
       updateSelInfo();
       flash('הסימולציה אותחלה ↺');
