@@ -45,11 +45,7 @@
       border-radius: 6px; padding: 4px 6px; font-size: 13px; text-align: center;
     }
     #settings .divider { height: 1px; background: #24406e; margin: 9px 0; }
-    #settings #runExtract {
-      width: 100%; margin-top: 8px; background: #143a5a; color: #cfe8ff;
-      border: 1px solid #2f7fd0; border-radius: 7px; padding: 7px; font-size: 14px; cursor: pointer;
-    }
-    #settings #runExtract:hover { background: #1b4e78; }
+    /* run/extract buttons are styled by #settings .simbtns button (2×2 grid) */
     #tools {
       position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
       display: flex; align-items: center; gap: 8px;
@@ -92,10 +88,67 @@
     }
     #settings .go:hover { background: #1b4e78; }
     #settings .go.prim { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
+    /* ---- top toolbar: show/hide the panels ---- */
+    .hidden { display: none !important; }
+    #topbar {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 12;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(14,20,36,0.85); border: 1px solid #24406e; border-radius: 10px;
+      padding: 6px 10px; backdrop-filter: blur(6px);
+    }
+    #topbar button {
+      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
+      padding: 6px 12px; font-size: 14px; cursor: pointer;
+    }
+    #topbar button:hover { background: #274068; }
+    #topbar button.tab.active { background: #b06a1e; border-color: #e0a458; color: #fff3e0; }
+    #topbar .tsep { width: 1px; height: 22px; background: #35538a; margin: 0 2px; }
+    /* ---- compact simulation panel ---- */
+    #settings { padding: 9px 11px; font-size: 12px; min-width: 0; }
+    #settings h2 { font-size: 13px; margin-bottom: 6px; }
+    #settings label { margin: 4px 0; gap: 6px; }
+    #settings input { width: 52px; padding: 3px 5px; font-size: 12px; }
+    #settings .divider { margin: 7px 0; }
+    #settings .simbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    #settings .simbtns button {
+      width: 100%; margin: 0; padding: 6px 4px; font-size: 12px; border-radius: 7px; cursor: pointer;
+      background: #143a5a; color: #cfe8ff; border: 1px solid #2f7fd0;
+    }
+    #settings .simbtns button:hover { background: #1b4e78; }
+    #settings .simbtns button.go.prim { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
+    /* ---- floating build panel (toggled from the top bar) ---- */
+    #buildPanel {
+      position: fixed; top: 62px; left: 50%; transform: translateX(-50%); z-index: 11;
+      display: flex; flex-direction: column; gap: 7px; min-width: 190px;
+      background: rgba(14,20,36,0.92); border: 1px solid #24406e; border-radius: 10px;
+      padding: 10px 12px; backdrop-filter: blur(6px); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    #buildPanel h2 { font-size: 13px; color: #7fd0ff; margin-bottom: 2px; }
+    #buildPanel button {
+      width: 100%; background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a;
+      border-radius: 7px; padding: 6px 11px; font-size: 15px; cursor: pointer;
+    }
+    #buildPanel button:hover { background: #274068; }
+    #buildPanel .menurow { display: flex; gap: 6px; }
+    #buildPanel .menurow button { flex: 1; }
+    #buildPanel #del { background: #4a1f24; border-color: #8a353f; color: #ffd0d0; }
+    #buildPanel #del:hover { background: #6a2a30; }
+    #buildPanel #save { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
+    #buildPanel #save:hover { background: #276e48; }
+    #buildPanel #edit.active, #buildPanel #wall.active { background: #b06a1e; border-color: #e0a458; color: #fff3e0; }
+    #buildPanel #selinfo { color: #7fd0ff; font-size: 12px; text-align: center; margin-top: 2px; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <canvas id="app"></canvas>
+
+  <div id="topbar">
+    <button id="btnHud" class="tab active" title="פאנל המתקן — רותם שני">🏢 רותם שני</button>
+    <button id="btnBuild" class="tab" title="תפריט בניה ועריכה">🔨 בניה</button>
+    <button id="btnSim" class="tab active" title="תפריט סימולציה">⚙ סימולציה</button>
+    <span class="tsep"></span>
+    <button id="top" title="מבט על">⬇ מבט על</button>
+  </div>
 
   <div id="hud">
     <h1>רותם שני — מתקן חניה</h1>
@@ -125,41 +178,35 @@
   </div>
 
   <div id="settings">
-    <h2>⚙ זמני סימולציה</h2>
+    <h2>⚙ סימולציה</h2>
     <label>מהירות נסיעה <span class="u">מ׳/ש'</span><input type="number" id="cfgTravel" value="2.5" step="0.5" min="0.5"></label>
     <label>סיבוב צלחת <span class="u">°/ש'</span><input type="number" id="cfgSpin" value="120" step="10" min="10"></label>
     <label>מהירות מעלית <span class="u">מ׳/ש'</span><input type="number" id="cfgLift" value="1.0" step="0.5" min="0.1"></label>
-    <label>זמן השהיה בין תנועת משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="0.5" step="0.1" min="0"></label>
+    <label>השהיה בין משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="0.5" step="0.1" min="0"></label>
     <div class="divider"></div>
-    <label>מספר רכב להוצאה <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
-    <button id="runExtract">▶ הפעל חילוץ</button>
-    <div class="divider"></div>
-    <button id="runIntakeBtn">▶ קלוט רכב (לחזית)</button>
-    <div class="divider"></div>
-    <button id="pause" class="go" title="השהה / המשך את התרחיש הרץ">⏸ השהה</button>
-    <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ אתחל סימולציה</button>
+    <label>מספר רכב <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
+    <div class="simbtns">
+      <button id="runExtract" title="חלץ את הרכב שמספרו נבחר">הוצאת רכב</button>
+      <button id="runIntakeBtn" title="קלוט רכב לחניה הריקה הקרובה">הכנסת רכב</button>
+      <button id="pause" class="go" title="השהה / המשך את התרחיש הרץ">⏸ השהיה</button>
+      <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ איתחול</button>
+    </div>
   </div>
 
   <div id="help">⚠️ עריכה נעולה — לחץ <b>🔒 עדכן</b> כדי לאפשר שינויים<br>מצלמה: גרירה בשטח ריק = סיבוב · גלגלת = זום · קליק־ימני = הזזה<br>אובייקט: לחיצה = בחירה · גרירה = הזזה · Q/E = סיבוב · R = 90° · Delete = מחיקה<br>קיר: ➕ קיר → לחיצה על נקודת התחלה ואז נקודת סיום · Esc = יציאה</div>
 
-  <div id="tools">
-    <div id="buildMenu" class="menu">
-      <button id="buildToggle" title="כלי בניה ועריכה">🔨 בניה ▾</button>
-      <div id="buildPanel" class="menupanel">
-        <button id="edit" title="מצב עריכה — חובה להפעיל כדי לשנות">🔒 עדכן</button>
-        <div class="menurow">
-          <button id="rotL" title="סובב שמאלה (Q)">⟲</button>
-          <button id="rot90" title="הצמד ל-90° (R)">90°</button>
-          <button id="rotR" title="סובב ימינה (E)">⟳</button>
-        </div>
-        <button id="wall" title="בנה קיר: לחיצה על נקודת התחלה ואז נקודת סיום">➕ קיר</button>
-        <button id="del" title="מחק נבחר (Delete)">🗑 מחק</button>
-        <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
-      </div>
+  <div id="buildPanel" class="hidden">
+    <h2>🔨 בניה</h2>
+    <button id="edit" title="מצב עריכה — חובה להפעיל כדי לשנות">🔒 עדכן</button>
+    <div class="menurow">
+      <button id="rotL" title="סובב שמאלה (Q)">⟲</button>
+      <button id="rot90" title="הצמד ל-90° (R)">90°</button>
+      <button id="rotR" title="סובב ימינה (E)">⟳</button>
     </div>
-    <button id="hidecars" title="הסתר/הצג רכבים">🚗 הסתר רכבים</button>
-    <span id="selinfo">לא נבחר משטח</span>
-    <button id="top" title="מבט על">⬇ מבט על</button>
+    <button id="wall" title="בנה קיר: נקודת התחלה ואז נקודת סיום">➕ קיר</button>
+    <button id="del" title="מחק נבחר (Delete)">🗑 מחק</button>
+    <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
+    <div id="selinfo">לא נבחר משטח</div>
   </div>
 
   <canvas id="compass" width="84" height="84"></canvas>
@@ -943,7 +990,6 @@
       if (b) b.textContent = v ? '🚗 הסתר רכבים' : '🚗 הצג רכבים';
     }
     document.getElementById('tCars').onchange = e => setCars(e.target.checked);
-    document.getElementById('hidecars').onclick = () => setCars(!document.getElementById('tCars').checked);
     document.getElementById('tTrays').onchange = e => {
       trayGroups.forEach(g => g.children.forEach(c => { if (c.userData.isTrayPlate) c.visible = e.target.checked; }));
     };
@@ -1118,10 +1164,14 @@
     }
     document.getElementById('save').onclick = saveLayout;
     document.getElementById('top').onclick = topView;
-    // build-menu dropdown: toggle the panel; close it on an outside click
-    { const bt = document.getElementById('buildToggle'), bp = document.getElementById('buildPanel'), bm = document.getElementById('buildMenu');
-      bt.onclick = e => { e.stopPropagation(); const open = bp.classList.toggle('open'); bt.classList.toggle('active', open); };
-      document.addEventListener('click', e => { if (bm && !bm.contains(e.target)) { bp.classList.remove('open'); bt.classList.remove('active'); } }); }
+    // top toolbar: each button shows/hides its panel and reflects the state (active = shown)
+    const togglePanel = (btnId, panelId) => {
+      const btn = document.getElementById(btnId), panel = document.getElementById(panelId);
+      btn.onclick = () => { const shown = !panel.classList.toggle('hidden'); btn.classList.toggle('active', shown); };
+    };
+    togglePanel('btnHud', 'hud');
+    togglePanel('btnBuild', 'buildPanel');
+    togglePanel('btnSim', 'settings');
     document.getElementById('wall').onclick = () => {
       if (!editMode && !wallMode) { flash('הפעל "עדכן" כדי לבנות'); return; }
       setWallMode(!wallMode);
@@ -1990,7 +2040,7 @@
     const pauseBtn = document.getElementById('pause');
     function setPaused(p) {
       paused = p;
-      pauseBtn.textContent = paused ? '▶ המשך' : '⏸ השהה';
+      pauseBtn.textContent = paused ? '▶ המשך' : '⏸ השהיה';
       pauseBtn.classList.toggle('prim', paused);
     }
     pauseBtn.onclick = () => {
