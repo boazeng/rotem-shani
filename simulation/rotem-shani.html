@@ -765,7 +765,7 @@
     let liftGroup = null, liftPlatform = null;
     const LIFT_PLAT_Y = -0.1;   // platform is 0.2 thick -> its TOP rests at y=0 (the tray's base), so a tray
                                 // boarding it sits flush ON it (not swallowed). It drops into a pit (below).
-    const LIFT_REST_Y = LIFT_PLAT_Y + 0.5;   // at init/reset the empty platform sits 0.5m PROUD of the floor so it's clearly visible
+    const LIFT_REST_Y = LIFT_PLAT_Y - 0.8;   // at rest the platform floor sits 80cm below the garage floor (top at -0.8), in an open pit
     const liftSrc = (savedLayout && savedLayout.lift) ? savedLayout.lift : L.lift;
     if (liftSrc) {
       const lg = new THREE.Group();
@@ -779,10 +779,11 @@
       lg.add(plat);
       const postMat = new THREE.MeshStandardMaterial({ color: 0x7fd0ff, roughness: 0.4, metalness: 0.6,
         emissive: 0x2f6f9a, emissiveIntensity: 0.5 });   // posts glow a little so the lift is easy to spot
-      const POSTH = H;   // posts span the floor to the ground/roof level (not above it)
+      const POST_BOT = LIFT_REST_Y + 0.1;    // reach down to the parked platform floor (~-0.8) in the pit
+      const POSTH = H - POST_BOT;             // rails span the pit floor up to the roof level
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
         const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, POSTH, 0.14), postMat);
-        p.position.set(sx * (TRAY_L + 0.4) / 2, POSTH / 2, sz * (TRAY_W + 0.5) / 2);
+        p.position.set(sx * (TRAY_L + 0.4) / 2, POST_BOT + POSTH / 2, sz * (TRAY_W + 0.5) / 2);
         lg.add(p);
       });
       // a fluorescent-style light directly above the lift (no visible fixture) so the platform is always well-lit
@@ -822,7 +823,7 @@
           fShape.holes.push(liftHole());
           const fGeo = new THREE.ShapeGeometry(fShape); fGeo.rotateX(-Math.PI / 2);
           floor.geometry.dispose(); floor.geometry = fGeo; }
-        const PITD = 0.5, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // deeper open pit / wall thickness / opening
+        const PITD = 1.0, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // 80cm open pit under the lift (walls 0..-1.0, platform floor at -0.8)
         const pitMat = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 1.0, metalness: 0.0 });
         const pit = new THREE.Group(); pit.position.set(lx, 0, lz); pit.rotation.y = lry;
         const bot = new THREE.Mesh(new THREE.BoxGeometry(iw + 2 * WT, 0.05, idp + 2 * WT), pitMat);
@@ -1483,6 +1484,41 @@
       flash('מדמה משטח #' + num + '…');
     }
 
+    // ---- CAR 1 (the aisle car at spot P1, a spur off the lift axis at E4) ----
+    // Its INTAKE motion: it comes down on the lift facing OUT, drives to the turntable W1, spins ~180° to face
+    // the LIFT, then returns ALONG the lift axis (E3 -> E4) and parks at P1 facing the lift. car1Descent is the
+    // descend-and-park half; car1Cycle demonstrates the whole thing as a round trip from rest (rise like an
+    // exit, then this descent).
+    function car1Descent(g, faceLift) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+      const lux = Math.cos(lry), luz = -Math.sin(lry);
+      const ix = lx + lux * (ttz - lz) / (luz || 1e-9);      // E3: lift axis at the turntable row
+      const home = homePos(g);                                // P1 (car 1's canonical spot)
+      const e4x = lx + lux * (home.z - lz) / (luz || 1e-9);   // E4: lift axis at car-1's row
+      return { tray: g, end: { x: home.x, z: home.z, ry: faceLift, y: 0 }, steps: [
+        { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },                            // descend on the lift
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },       // EL -> E3
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },                 // E3 -> W1 (onto the turntable)
+        { type: 'turn', to: faceLift, dur: spinDur(180) },                                       // spin ~180° to face the LIFT
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },                  // W1 -> E3 (back to the lift axis)
+        { type: 'move', to: { x: e4x, z: home.z }, dur: dur(Math.hypot(ix - e4x, ttz - home.z)) }, // E3 -> E4 (along the axis)
+        { type: 'move', to: { x: home.x, z: home.z }, dur: dur(Math.abs(e4x - home.x)) },        // E4 -> P1 (into the spur)
+      ] };
+    }
+    function car1Cycle() {
+      const g = trayGroups.find(t => t.userData.isTray && t.userData.num === 1);
+      if (!g) { flash('לא נמצא רכב 1'); return; }
+      if (!turntableGroup || !liftGroup) { flash('אין מעלית/צלחת'); return; }
+      // rest orientation at P1 = car 1's saved home rotation (now flipped 180° to face the lift).
+      const faceLift = homeRy(g);
+      const up = fullExit(g);                    // rise: P1 -> W1 -> face out -> E3 -> EL -> up (like an exit)
+      const down = car1Descent(g, faceLift);     // descend -> W1 -> spin 180° (face lift) -> E3 -> E4 -> P1
+      down.onDone = () => flash('רכב 1 — ירידה מהמעלית, סיבוב ב-W1, חניה מול המעלית ✓');
+      runTasks([up, down]);
+      flash('תנועת רכב 1');
+    }
+
     // ============ MOVEMENT CONSTRAINT GRAPH (from "car position.xlsx") ============
     // Single source of truth for legal tray moves: each node lists the spots a tray may slide to from it.
     // Nodes: 'P1'..'P22' parking spots · 'P23'/'P24' aisle spots (= grid cells A1/A0) · E1/W1/E3/EL/E4 the
@@ -1958,6 +1994,7 @@
       if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (BLOCK1.has(num)) extractFromBlock1(num);
       else if (BLOCK2.has(num)) extractFromBlock2(num);
+      else if (num === 1) car1Cycle();   // car 1: intake motion (lift -> W1 -> 180° -> E4 -> P1, facing the lift)
       else playCar(num);
     }
 
