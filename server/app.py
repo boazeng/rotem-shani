@@ -91,4 +91,7 @@ async def admin_only(user: dict = Depends(require_role("admin"))):
 # ---- static apps (behind the auth middleware) ----
 # the simulation (HTML + JSON + PNG + the .glb models) and the ops dashboard
 app.mount("/dashboard", StaticFiles(directory=str(DASH_DIR), html=True), name="dashboard")
+# the sim's "מרכז ניהול" button opens ./admin/index.html (relative to /sim/rotem-shani.html) — serve the
+# dashboard there too so that link resolves. MUST be registered before /sim so it matches first.
+app.mount("/sim/admin", StaticFiles(directory=str(DASH_DIR), html=True), name="sim-admin")
 app.mount("/sim", StaticFiles(directory=str(SIM_DIR), html=True), name="sim")
