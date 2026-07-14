@@ -2019,12 +2019,43 @@
       flash('חילוץ רכב ' + T + ' מבלוק 2 — ' + sol.length + ' הזזות');
     }
 
+    // CAR 1 EXTRACTION — car 1 rests at P1 already ALIGNED with the lift (rot 97 = lift rot), so it exits WITHOUT
+    // any turntable spin: P1 -> E4 (foot of P1 on the lift axis) -> lift -> rise -> the car exits to ground level
+    // (vanishes) -> the EMPTY tray descends and returns to P1. (Rotation only ever happens on INTAKE to P1.)
+    function extractCar1() {
+      if (busy()) { flash('הדמיה כבר רצה'); return; }
+      const g = trayGroups.find(t => t.userData.isTray && t.userData.num === 1);
+      if (!g) { flash('לא נמצא רכב 1'); return; }
+      if (!liftGroup) { flash('אין מעלית'); return; }
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+      const lux = Math.cos(lry), luz = -Math.sin(lry);
+      const hp = homePos(g), ry = homeRy(g);                       // P1 + its resting orientation (already faces the lift)
+      const s = (hp.x - lx) * lux + (hp.z - lz) * luz;             // project P1 onto the lift axis
+      const e4 = { x: lx + lux * s, z: lz + luz * s };             // E4 = foot of P1 on the lift axis
+      const up = { tray: g, end: { x: lx, z: lz, ry, y: H }, steps: [   // NO turn — car 1 already faces the lift
+        { type: 'move', to: { x: e4.x, z: e4.z }, dur: dur(Math.hypot(hp.x - e4.x, hp.z - e4.z)) },   // P1 -> E4 (onto the axis)
+        { type: 'move', to: { x: lx, z: lz }, dur: dur(Math.hypot(e4.x - lx, e4.z - lz)) },           // E4 -> lift (along the axis)
+        { type: 'liftup', to: H, dur: Math.max(0.4, H / CFG.lift) } ] };
+      up.onDone = () => delay(3, () => {
+        const c = trayCar(g); if (c) c.visible = false;            // car exits to ground level -> vanishes
+        g.userData.empty = true;
+        const down = { tray: g, end: { x: hp.x, z: hp.z, ry, y: 0 }, steps: [   // empty tray returns
+          { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },
+          { type: 'move', to: { x: e4.x, z: e4.z }, dur: dur(Math.hypot(lx - e4.x, lz - e4.z)) },
+          { type: 'move', to: { x: hp.x, z: hp.z }, dur: dur(Math.hypot(e4.x - hp.x, e4.z - hp.z)) } ] };
+        down.onDone = () => { settleClean(); flash('רכב 1 יצא מהמתקן — מגש ריק חזר ל-P1 ✓'); };
+        if (!runTasks([down])) { settleClean(); }
+      });
+      runTasks([up]);
+      flash('חילוץ רכב 1');
+    }
+
     function runScenario(num) {
       if (isNaN(num)) { flash('מספר רכב לא תקין'); return; }
       if (busy()) { flash('הדמיה כבר רצה'); return; }
       if (BLOCK1.has(num)) extractFromBlock1(num);
       else if (BLOCK2.has(num)) extractFromBlock2(num);
-      else if (num === 1) car1Cycle();   // car 1: intake motion (lift -> W1 -> 180° -> E4 -> P1, facing the lift)
+      else if (num === 1) extractCar1();   // car 1: straight exit to the lift, no spin, car vanishes, tray returns
       else playCar(num);
     }
 
