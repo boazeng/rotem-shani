@@ -319,7 +319,8 @@
     scene.add(new THREE.Line(edgeGeo, new THREE.LineBasicMaterial({ color: 0x4a6fa5 })));
 
     // ---- perimeter walls (box per edge, following the polygon) ----
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x646973, roughness: 0.95 });
+    // emissive grey so the facility's OUTER wall face reads as concrete-grey (not black) in full-dark mode
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x646973, roughness: 0.95, emissive: 0x767b85, emissiveIntensity: 0.8 });
     const wallGrp = new THREE.Group();
     const T = 0.25;
     for (let i = 0; i < shapePts.length; i++) {
@@ -727,7 +728,7 @@
     const userWalls = new THREE.Group();
     scene.add(userWalls);
     const wallGroupsArr = [];
-    const wallUserMat = new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.9 });
+    const wallUserMat = new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.9, emissive: 0x767b85, emissiveIntensity: 0.6 });
     const WALL_T = 0.2;
     function buildWall(eastNorth, rotDeg, len) {
       const g = new THREE.Group();
