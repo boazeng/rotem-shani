@@ -71,6 +71,27 @@
     #tools button.go { background: #143a5a; border-color: #2f7fd0; color: #cfe8ff; min-width: 0; }
     #tools button.go:hover { background: #1b4e78; }
     #tools #selinfo { color: #7fd0ff; font-variant-numeric: tabular-nums; min-width: 150px; text-align: center; }
+    /* build dropdown menu inside the toolbar */
+    #tools .menu { position: relative; display: flex; }
+    #tools .menupanel {
+      position: absolute; bottom: calc(100% + 10px); right: 0; z-index: 20;
+      display: none; flex-direction: column; gap: 6px;
+      background: rgba(14,20,36,0.96); border: 1px solid #24406e; border-radius: 10px;
+      padding: 8px; min-width: 160px; backdrop-filter: blur(6px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    #tools .menupanel.open { display: flex; }
+    #tools .menupanel button { width: 100%; }
+    #tools .menurow { display: flex; gap: 6px; }
+    #tools .menurow button { flex: 1; min-width: 0; }
+    #tools #buildToggle.active { background: #b06a1e; border-color: #e0a458; color: #fff3e0; }
+    /* pause / reset-sim buttons moved into the "זמני סימולציה" (settings) panel */
+    #settings .go {
+      width: 100%; margin-top: 8px; background: #143a5a; color: #cfe8ff;
+      border: 1px solid #2f7fd0; border-radius: 7px; padding: 7px; font-size: 14px; cursor: pointer;
+    }
+    #settings .go:hover { background: #1b4e78; }
+    #settings .go.prim { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
   </style>
 </head>
 <body>
@@ -114,27 +135,31 @@
     <button id="runExtract">▶ הפעל חילוץ</button>
     <div class="divider"></div>
     <button id="runIntakeBtn">▶ קלוט רכב (לחזית)</button>
+    <div class="divider"></div>
+    <button id="pause" class="go" title="השהה / המשך את התרחיש הרץ">⏸ השהה</button>
+    <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ אתחל סימולציה</button>
   </div>
 
   <div id="help">⚠️ עריכה נעולה — לחץ <b>🔒 עדכן</b> כדי לאפשר שינויים<br>מצלמה: גרירה בשטח ריק = סיבוב · גלגלת = זום · קליק־ימני = הזזה<br>אובייקט: לחיצה = בחירה · גרירה = הזזה · Q/E = סיבוב · R = 90° · Delete = מחיקה<br>קיר: ➕ קיר → לחיצה על נקודת התחלה ואז נקודת סיום · Esc = יציאה</div>
 
   <div id="tools">
-    <button id="edit" title="מצב עריכה — חובה להפעיל כדי לשנות">🔒 עדכן</button>
-    <span class="sep"></span>
-    <button id="rotL" title="סובב שמאלה (Q)">⟲</button>
-    <button id="rot90" title="הצמד ל-90° (R)">90°</button>
-    <button id="rotR" title="סובב ימינה (E)">⟳</button>
-    <button id="del" title="מחק נבחר (Delete)">🗑 מחק</button>
-    <button id="wall" title="בנה קיר: לחיצה על נקודת התחלה ואז נקודת סיום">➕ קיר</button>
+    <div id="buildMenu" class="menu">
+      <button id="buildToggle" title="כלי בניה ועריכה">🔨 בניה ▾</button>
+      <div id="buildPanel" class="menupanel">
+        <button id="edit" title="מצב עריכה — חובה להפעיל כדי לשנות">🔒 עדכן</button>
+        <div class="menurow">
+          <button id="rotL" title="סובב שמאלה (Q)">⟲</button>
+          <button id="rot90" title="הצמד ל-90° (R)">90°</button>
+          <button id="rotR" title="סובב ימינה (E)">⟳</button>
+        </div>
+        <button id="wall" title="בנה קיר: לחיצה על נקודת התחלה ואז נקודת סיום">➕ קיר</button>
+        <button id="del" title="מחק נבחר (Delete)">🗑 מחק</button>
+        <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
+      </div>
+    </div>
     <button id="hidecars" title="הסתר/הצג רכבים">🚗 הסתר רכבים</button>
     <span id="selinfo">לא נבחר משטח</span>
-    <span class="sep"></span>
-    <button id="play" class="go" title="חילוץ רכב נבחר מבלוק 1 (חידת 15)">▶ הדמיה</button>
-    <button id="pause" class="go" title="השהה / המשך את התרחיש הרץ">⏸ השהה</button>
-    <button id="resetsim" class="go" title="החזר את כל הרכבים למצב ההתחלתי">↺ אתחל סימולציה</button>
     <button id="top" title="מבט על">⬇ מבט על</button>
-    <button id="save" class="prim" title="שמור פריסה">💾 שמור</button>
-    <button id="reset" title="אפס לפריסה מקורית">איפוס</button>
   </div>
 
   <canvas id="compass" width="84" height="84"></canvas>
@@ -1092,8 +1117,11 @@
       applyCam();
     }
     document.getElementById('save').onclick = saveLayout;
-    document.getElementById('reset').onclick = resetLayout;
     document.getElementById('top').onclick = topView;
+    // build-menu dropdown: toggle the panel; close it on an outside click
+    { const bt = document.getElementById('buildToggle'), bp = document.getElementById('buildPanel'), bm = document.getElementById('buildMenu');
+      bt.onclick = e => { e.stopPropagation(); const open = bp.classList.toggle('open'); bt.classList.toggle('active', open); };
+      document.addEventListener('click', e => { if (bm && !bm.contains(e.target)) { bp.classList.remove('open'); bt.classList.remove('active'); } }); }
     document.getElementById('wall').onclick = () => {
       if (!editMode && !wallMode) { flash('הפעל "עדכן" כדי לבנות'); return; }
       setWallMode(!wallMode);
@@ -1959,7 +1987,6 @@
       }
       runScenario(num);
     }
-    document.getElementById('play').onclick = playScenario;
     const pauseBtn = document.getElementById('pause');
     function setPaused(p) {
       paused = p;
