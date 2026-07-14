@@ -797,7 +797,7 @@
     // world position lands correctly after the same rotateX(-PI/2) the floor uses.
     {
       // small lift-shaft opening — a rectangle just around the 4 raised posts, so they surface through the roof
-      let liftHole = null;
+      let liftHole = null, roofHole = null;
       if (liftGroup) {
         const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
         const hl = (TRAY_L + 0.4) / 2 + 0.5, hw = (TRAY_W + 0.5) / 2 + 0.5;   // open margin around the platform so it isn't hidden by the floor
@@ -808,6 +808,12 @@
         // ShapeGeometry/ExtrudeGeometry + rotateX(-PI/2) map shape.y -> world -Z, so negate Z to land the hole
         // on the lift's real world position (the bbox is ~symmetric in Z, which is why floor/grass looked fine).
         liftHole = () => new THREE.Path(cn.map(c => new THREE.Vector2(c[0], -c[1])));
+        // TEST: a MUCH larger opening in the ground-floor roof (concrete ceiling + grass) over the lift, to check
+        // whether a ground-level surface is what hides the lift when viewed from the top.
+        const RL = (TRAY_L + 0.4) / 2 + 2.0, RW = (TRAY_W + 0.5) / 2 + 2.0;
+        const rcn = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([sx, sz]) =>
+          [lx + sx * RL * ux + sz * RW * vx, lz + sx * RL * uz + sz * RW * vz]);
+        roofHole = () => new THREE.Path(rcn.map(c => new THREE.Vector2(c[0], -c[1])));
         // dig a shallow PIT under the lift: cut the garage floor here so the lowered platform (top at y=0)
         // drops into a lined recess, and a boarding tray sits flush on the platform instead of inside it.
         { const fShape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.y)));
@@ -831,7 +837,7 @@
       const ceilShape = new THREE.Shape([
         new THREE.Vector2(-rx, -rz), new THREE.Vector2(rx, -rz),
         new THREE.Vector2(rx, rz), new THREE.Vector2(-rx, rz)]);
-      if (liftHole) ceilShape.holes.push(liftHole());
+      if (roofHole) ceilShape.holes.push(roofHole());   // big test opening in the concrete ground floor over the lift
       const SLAB = 0.4;
       const ceilGeo = new THREE.ExtrudeGeometry(ceilShape, { depth: SLAB, bevelEnabled: false });
       ceilGeo.rotateX(-Math.PI / 2);
@@ -865,7 +871,7 @@
       const grassShape = new THREE.Shape([
         new THREE.Vector2(-grx, -grz), new THREE.Vector2(grx, -grz),
         new THREE.Vector2(grx, grz), new THREE.Vector2(-grx, grz)]);
-      if (liftHole) grassShape.holes.push(liftHole());
+      if (roofHole) grassShape.holes.push(roofHole());   // big test opening in the grass roof over the lift
       const grassGeo = new THREE.ShapeGeometry(grassShape); grassGeo.rotateX(-Math.PI / 2);
       // procedural green grass texture; self-lit (emissive) so it reads green even in "full dark" mode
       const gc = document.createElement('canvas'); gc.width = gc.height = 256;
