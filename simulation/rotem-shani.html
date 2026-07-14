@@ -171,7 +171,7 @@
     <div class="legend">
       <label class="tog"><input type="checkbox" id="tPlan"> שרטוט (DWG)</label><br>
       <label class="tog"><input type="checkbox" id="tNums" checked> מספרי רכבים</label><br>
-      <label class="tog"><input type="checkbox" id="tSpots" checked> מספרי חניות</label><br>
+      <label class="tog"><input type="checkbox" id="tSpots"> מספרי חניות</label><br>
       <label class="tog"><input type="checkbox" id="tCenters"> סימון מרכזים</label><br>
       <label class="tog"><input type="checkbox" id="tGuides"> קווי עזר</label><br>
       <label class="tog"><input type="checkbox" id="tDark" checked> חושך מוחלט (כיבוי אור סביבתי)</label><br>
@@ -796,7 +796,7 @@
       let liftHole = null;
       if (liftGroup) {
         const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
-        const hl = (TRAY_L + 0.4) / 2 + 0.3, hw = (TRAY_W + 0.5) / 2 + 0.3;   // just a bit around the posts
+        const hl = (TRAY_L + 0.4) / 2 + 0.5, hw = (TRAY_W + 0.5) / 2 + 0.5;   // open margin around the platform so it isn't hidden by the floor
         const ux = Math.cos(lry), uz = -Math.sin(lry);
         const vx = Math.sin(lry), vz = Math.cos(lry);
         const cn = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([sx, sz]) =>
@@ -810,7 +810,7 @@
           fShape.holes.push(liftHole());
           const fGeo = new THREE.ShapeGeometry(fShape); fGeo.rotateX(-Math.PI / 2);
           floor.geometry.dispose(); floor.geometry = fGeo; }
-        const PITD = 0.35, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // pit depth / wall thickness / opening
+        const PITD = 0.5, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // deeper open pit / wall thickness / opening
         const pitMat = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 1.0, metalness: 0.0 });
         const pit = new THREE.Group(); pit.position.set(lx, 0, lz); pit.rotation.y = lry;
         const bot = new THREE.Mesh(new THREE.BoxGeometry(iw + 2 * WT, 0.05, idp + 2 * WT), pitMat);
