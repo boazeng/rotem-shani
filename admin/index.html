@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>רותם שני — מרכז ניהול</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0e1a'/%3E%3Cg fill='%2322c55e'%3E%3Cpath d='M10 40c0-2 1-3 3-3l4-9c1-2 3-4 6-4h18c3 0 5 2 6 4l4 9c2 0 3 1 3 3v6a2 2 0 0 1-2 2h-3a5 5 0 0 1-10 0H25a5 5 0 0 1-10 0h-3a2 2 0 0 1-2-2z'/%3E%3C/g%3E%3Cg fill='%230a0e1a'%3E%3Cpath d='M20 25c1-1 2-2 4-2h6v9H16zM34 23h6c2 0 3 1 4 2l4 7H34z'/%3E%3Ccircle cx='20' cy='47' r='3'/%3E%3Ccircle cx='44' cy='47' r='3'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/recipes.css" />
+  <style>
+    /* ---- TACT logo (ported from TactLogo.css) ---- */
+    .tact-logo { display: inline-flex; font-size: 1rem; }
+    .tact-logo-row { display: inline-flex; align-items: baseline; gap: 11px; direction: ltr; }
+    .tact-logo-word { order: 2; font-size: .78em; font-weight: 500; letter-spacing: .02em;
+      font-family: var(--font-family); color: var(--color-text-light); }
+    .tact-logo-mark { display: inline-flex; align-items: center; order: 1; }
+    .tact-logo-seg { display: inline-flex; align-items: center; }
+    .tact-logo-letter { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 700;
+      font-size: 1.55em; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
+    .tact-logo-dot { width: .32em; height: .32em; border-radius: 50%;
+      background: var(--color-accent); margin: 0 .28em; align-self: center; }
+
+    /* ---- page layout ---- */
+    .page { padding: 30px 0 60px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px; margin-bottom: 26px; }
+    .page-title { font-size: var(--font-size-2xl); font-weight: 800; color: var(--color-primary);
+      line-height: 1.15; }
+    .page-sub { color: var(--color-text-light); margin-top: 4px; font-size: .98rem; }
+    .live-chip { display: inline-flex; align-items: center; gap: 7px; font-size: .8rem;
+      font-weight: 600; color: var(--color-text-light); }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-pos);
+      box-shadow: 0 0 0 0 rgba(47,143,91,.5); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(47,143,91,.5)} 70%{box-shadow:0 0 0 8px rgba(47,143,91,0)} 100%{box-shadow:0 0 0 0 rgba(47,143,91,0)} }
+
+    /* grids */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 30px; }
+    .kpi-grid .tact-kpi { background: var(--color-bg-white); border-color: var(--color-border); }
+    .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 34px; }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2,1fr); }
+      .cards-grid { grid-template-columns: 1fr; } }
+
+    .kpi-note { font-size: .78rem; color: var(--color-text-light); }
+    .card-metric { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 10px; }
+    .card-metric b { font-family: var(--font-family-en); font-size: 1.9rem; font-weight: 700;
+      color: var(--color-primary); }
+    .card-metric span { color: var(--color-text-light); font-size: .9rem; }
+    .card-row { display: flex; align-items: center; justify-content: space-between;
+      font-size: .88rem; padding: 5px 0; border-top: 1px dashed var(--t-bdl, var(--color-border)); }
+    .card-row:first-of-type { border-top: none; }
+    .card-row span:last-child { font-family: var(--font-family-en); font-weight: 600; color: var(--color-text); }
+    .cap-title { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--color-text); }
+
+    /* table panel */
+    .panel { background: var(--color-bg-white); border: 1px solid var(--color-border);
+      border-radius: 18px; box-shadow: var(--shadow-md); overflow: hidden; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--color-border); }
+    .panel-head h2 { font-size: 1.15rem; color: var(--color-primary); font-weight: 700; }
+    .panel-tools { display: flex; align-items: center; gap: 8px; }
+    .search { display: flex; align-items: center; gap: 8px; background: var(--color-bg);
+      border: 1px solid var(--color-border); border-radius: 10px; padding: 7px 12px; }
+    .search input { border: none; background: transparent; font: inherit; font-size: .9rem;
+      outline: none; color: var(--color-text); width: 150px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: right; font-size: .78rem; font-weight: 700; color: var(--color-text-light);
+      text-transform: uppercase; letter-spacing: .03em; padding: 12px 20px;
+      background: var(--color-primary-soft); }
+    thead th.num, tbody td.num { text-align: left; font-family: var(--font-family-en); }
+    tbody td { padding: 13px 20px; border-top: 1px solid var(--color-border); font-size: .92rem; }
+    tbody tr { transition: background .14s; }
+    tbody tr:hover { background: var(--color-primary-soft); }
+    .spot-badge { display: inline-flex; min-width: 30px; justify-content: center; font-family: var(--font-family-en);
+      font-weight: 700; color: var(--color-primary); background: #EAEFF4; border: 1px solid #D5DFEA;
+      border-radius: 8px; padding: 2px 8px; }
+    .st { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 600; }
+    .st-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .st-parked   { color: var(--color-primary); } .st-parked .st-dot { background: var(--color-primary); }
+    .st-retrieving { color: var(--color-accent); } .st-retrieving .st-dot { background: var(--color-accent); }
+    .st-aisle    { color: var(--color-pos); } .st-aisle .st-dot { background: var(--color-pos); }
+    .row-btn { font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
+      padding: 6px 14px; border-radius: 8px; border: 1px solid var(--color-border);
+      background: var(--color-bg-white); color: var(--color-primary); transition: all .15s; }
+    .row-btn:hover { background: var(--color-primary); color: var(--color-text-white); border-color: var(--color-primary); }
+    .blk { font-size: .82rem; color: var(--color-text-light); }
+
+    /* toast */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--color-ink); color: var(--color-text-white); padding: 12px 22px;
+      border-radius: 12px; font-size: .92rem; font-weight: 600; box-shadow: var(--shadow-lg);
+      opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 300; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .tact-footer { margin-top: 40px; border-radius: 18px 18px 0 0; justify-content: space-between; }
+    .foot-links { display: flex; gap: 18px; font-size: .85rem; }
+    .icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <div class="tact-aurora">
+
+    <!-- ===== Header ===== -->
+    <header class="tact-bar">
+      <span class="tact-logo tact-logo-light">
+        <span class="tact-logo-row">
+          <span class="tact-logo-mark">
+            <span class="tact-logo-seg"><span class="tact-logo-letter">T</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter">A</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter">C</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter">T</span></span>
+          </span>
+          <span class="tact-logo-word">רותם שני</span>
+        </span>
+      </span>
+
+      <nav class="tact-nav" style="margin-inline-start:auto;">
+        <button class="active">לוח בקרה</button>
+        <button data-soon>רכבים</button>
+        <button data-soon>חילוץ / קליטה</button>
+        <button data-soon>דוחות</button>
+        <button data-soon>הגדרות</button>
+      </nav>
+
+      <a class="tact-btn tact-btn-primary" style="padding:9px 18px;" target="_blank"
+         href="https://dmfotw8kwayzt.cloudfront.net/rotem-shani/rotem-shani.html">
+        פתח סימולציה ↗
+      </a>
+    </header>
+
+    <!-- ===== Page ===== -->
+    <main class="container page">
+
+      <div class="page-head">
+        <div>
+          <div class="page-title">לוח בקרה — מתקן חניה רובוטי</div>
+          <div class="page-sub">מרכז הניהול של מערכת Parkolay · חניון תת-קרקעי חד-קומתי</div>
+        </div>
+        <div class="live-chip"><span class="live-dot"></span> מחובר · עדכון אחרון עכשיו</div>
+      </div>
+
+      <!-- KPI row -->
+      <section class="kpi-grid">
+        <div class="tact-kpi">
+          <div class="tact-kpi-label">תפוסה נוכחית</div>
+          <div class="tact-kpi-val">20<span style="font-size:1.1rem;color:var(--color-text-light)"> / 22</span></div>
+          <div class="kpi-note">91% מהמתקן מאויש</div>
+        </div>
+        <div class="tact-kpi">
+          <div class="tact-kpi-label">חניות פנויות</div>
+          <div class="tact-kpi-val">2</div>
+          <div class="tact-delta tact-delta-up">מוכנות לקליטה</div>
+        </div>
+        <div class="tact-kpi">
+          <div class="tact-kpi-label">חילוצים היום</div>
+          <div class="tact-kpi-val">47</div>
+          <div class="tact-delta tact-delta-up">▲ 12% מאתמול</div>
+        </div>
+        <div class="tact-kpi">
+          <div class="tact-kpi-label">זמן חילוץ ממוצע</div>
+          <div class="tact-kpi-val">1:52</div>
+          <div class="kpi-note">דקות · מהבקשה עד המעלית</div>
+        </div>
+      </section>
+
+      <!-- Block status cards -->
+      <section class="cards-grid">
+        <article class="tact-card tone-steel">
+          <div class="tact-card-cap">
+            <span class="cap-title">
+              <span class="tact-card-ico"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+              בלוק 1
+            </span>
+            <span class="tact-badge tact-badge-on">פעיל</span>
+          </div>
+          <div class="tact-card-body">
+            <div class="card-metric"><b>11</b><span>רכבים · רשת 3×4</span></div>
+            <div class="card-row"><span>שער יציאה (רכב 5)</span><span>פנוי</span></div>
+            <div class="card-row"><span>חניות</span><span>2–11, 22</span></div>
+            <div class="card-row"><span>אלגוריתם</span><span>חידת-15</span></div>
+          </div>
+        </article>
+
+        <article class="tact-card tone-blue">
+          <div class="tact-card-cap">
+            <span class="cap-title">
+              <span class="tact-card-ico"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
+              בלוק 2
+            </span>
+            <span class="tact-badge tact-badge-on">פעיל</span>
+          </div>
+          <div class="tact-card-body">
+            <div class="card-metric"><b>9</b><span>רכבים + עוזר · רשת 3×3</span></div>
+            <div class="card-row"><span>מסדרון (P23/P24)</span><span>פנוי</span></div>
+            <div class="card-row"><span>מגש עוזר (21)</span><span>בזיז הבית P21</span></div>
+            <div class="card-row"><span>חניות</span><span>12–20</span></div>
+          </div>
+        </article>
+
+        <article class="tact-card tone-green">
+          <div class="tact-card-cap">
+            <span class="cap-title">
+              <span class="tact-card-ico"><svg class="icon" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
+              צלחת ומעלית
+            </span>
+            <span class="tact-badge tact-badge-pos">זמינה ✓</span>
+          </div>
+          <div class="tact-card-body">
+            <div class="card-metric"><b>0.0</b><span>מ׳ · המעלית בקרקעית</span></div>
+            <div class="card-row"><span>צלחת סיבוב</span><span>במנוחה</span></div>
+            <div class="card-row"><span>מגש במעבר (רכב 1)</span><span>מוכן</span></div>
+            <div class="card-row"><span>בור מעלית</span><span>נקי</span></div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Vehicles table -->
+      <section class="panel">
+        <div class="panel-head">
+          <h2>רכבים במתקן</h2>
+          <div class="panel-tools">
+            <div class="search">
+              <svg class="icon" viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+              <input id="q" type="text" placeholder="חיפוש דגם / מספר…" />
+            </div>
+            <button class="tact-btn tact-btn-ghost" style="padding:8px 16px;font-size:.88rem"
+              onclick="toast('קליטת רכב — יחובר בהמשך')">+ קלוט רכב</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th class="num">חנייה</th>
+                <th>דגם</th>
+                <th>בלוק</th>
+                <th>סטטוס</th>
+                <th style="text-align:left">פעולה</th>
+              </tr>
+            </thead>
+            <tbody><!-- filled by JS --></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== Footer ===== -->
+    <footer class="tact-footer container" style="max-width:var(--max-width);margin:40px auto 0;">
+      <span class="tact-logo tact-logo-dark" style="background:transparent;padding:0">
+        <span class="tact-logo-row">
+          <span class="tact-logo-mark">
+            <span class="tact-logo-seg"><span class="tact-logo-letter" style="color:var(--color-text-white)">T</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter" style="color:var(--color-text-white)">A</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter" style="color:var(--color-text-white)">C</span><span class="tact-logo-dot"></span></span>
+            <span class="tact-logo-seg"><span class="tact-logo-letter" style="color:var(--color-text-white)">T</span></span>
+          </span>
+        </span>
+      </span>
+      <div class="foot-links" style="margin-inline-start:auto">
+        <span>מרכז ניהול · רותם שני</span>
+        <span>© 2026</span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // Vehicle roster — derived from the simulation model / TRAY_MODEL mapping.
+    const MODELS = {
+      1:'Plymouth Barracuda', 2:'Hemi Cuda', 3:'Mercedes S65', 4:'Golf GTI', 5:'Chevrolet Malibu',
+      6:'130', 7:'Mini JCW', 8:'Corvette C8', 9:'Mustang ’65', 10:'Hyundai Kona', 11:'Mercedes SL63',
+      12:'Plymouth Barracuda', 13:'Hemi Cuda', 14:'Mercedes S65', 15:'Golf GTI', 16:'Chevrolet Malibu',
+      17:'130', 18:'Mini JCW', 19:'Corvette C8', 20:'Mustang ’65', 21:'Hyundai Kona', 22:'Mercedes SL63'
+    };
+    // block per spot
+    function blockOf(n){ if(n===1) return 'מעבר'; if(n>=2&&n<=11||n===22) return 'בלוק 1'; return 'בלוק 2'; }
+    // demo status: 2 free spots + one being retrieved
+    const FREE = new Set([16, 20]);
+    const RETRIEVING = new Set([8]);
+
+    const tbody = document.querySelector('#tbl tbody');
+    function stateFor(n){
+      if(FREE.has(n)) return null;                      // empty spot, no car
+      if(RETRIEVING.has(n)) return ['st-retrieving','בחילוץ'];
+      if(n===1) return ['st-aisle','במעבר'];
+      return ['st-parked','חונה'];
+    }
+    function render(filter=''){
+      const rows = [];
+      for(let n=1;n<=22;n++){
+        const st = stateFor(n);
+        const model = st ? MODELS[n] : '— חנייה פנויה —';
+        if(filter && !(String(n)===filter || model.toLowerCase().includes(filter.toLowerCase()))) continue;
+        if(!st){
+          rows.push(`<tr>
+            <td class="num"><span class="spot-badge" style="color:var(--color-text-light);background:var(--color-bg);border-color:var(--color-border)">${n}</span></td>
+            <td style="color:var(--color-text-light)">— חנייה פנויה —</td>
+            <td class="blk">${blockOf(n)}</td>
+            <td><span class="st st-aisle"><span class="st-dot"></span>פנויה</span></td>
+            <td style="text-align:left"><button class="row-btn" onclick="toast('קליטה לחנייה ${n} — יחובר בהמשך')">קלוט</button></td>
+          </tr>`);
+        } else {
+          rows.push(`<tr>
+            <td class="num"><span class="spot-badge">${n}</span></td>
+            <td>${MODELS[n]}</td>
+            <td class="blk">${blockOf(n)}</td>
+            <td><span class="st ${st[0]}"><span class="st-dot"></span>${st[1]}</span></td>
+            <td style="text-align:left"><button class="row-btn" onclick="toast('חילוץ רכב ${n} (${MODELS[n]}) — יחובר בהמשך')">חלץ ↗</button></td>
+          </tr>`);
+        }
+      }
+      tbody.innerHTML = rows.join('') || `<tr><td colspan="5" style="text-align:center;color:var(--color-text-light);padding:26px">לא נמצאו רכבים</td></tr>`;
+    }
+    render();
+    document.querySelector('#q').addEventListener('input', e => render(e.target.value.trim()));
+
+    // nav placeholders + toast
+    document.querySelectorAll('.tact-nav button').forEach(b => {
+      b.addEventListener('click', () => {
+        if(b.classList.contains('active')) return;
+        toast(b.textContent.trim() + ' — בקרוב');
+      });
+    });
+    let toastTimer;
+    function toast(msg){
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+    }
+  </script>
+</body>
+</html>

@@ -152,6 +152,8 @@
     <button id="btnSim" class="tab active" title="תפריט סימולציה">⚙ סימולציה</button>
     <span class="tsep"></span>
     <button id="top" title="מבט על">⬇ מבט על</button>
+    <span class="tsep"></span>
+    <button id="btnAdmin" title="פתח את מרכז הניהול בלשונית חדשה">🖥 מרכז ניהול ↗</button>
   </div>
 
   <div id="hud">
@@ -1171,6 +1173,13 @@
     }
     document.getElementById('save').onclick = saveLayout;
     document.getElementById('top').onclick = topView;
+    // open the management site in a new tab. Resolve the path per environment:
+    // file:// (local, opened directly) → sibling folder ../admin ; when hosted
+    // (CloudFront under /rotem-shani/) → admin/ lives under the same prefix.
+    document.getElementById('btnAdmin').onclick = () => {
+      const local = location.protocol === 'file:' || /^(localhost|127\.)/.test(location.hostname);
+      window.open(local ? '../admin/index.html' : 'admin/index.html', '_blank');
+    };
     // top toolbar: each button shows/hides its panel and reflects the state (active = shown)
     const togglePanel = (btnId, panelId) => {
       const btn = document.getElementById(btnId), panel = document.getElementById(panelId);

@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'simulation/**'
+      - 'admin/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch: {}   # allow manual runs from the Actions tab
 
@@ -64,6 +65,10 @@ jobs:
           aws s3 sync simulation/ "s3://${BUCKET}/${PREFIX}/" --delete \
             --exclude "models/*" \
             --exclude "*.backup*.json" --exclude "serve.py" --exclude "SUMMARY.md"
+
+      - name: Sync the management site (admin) under the same prefix
+        run: |
+          aws s3 sync admin/ "s3://${BUCKET}/${PREFIX}/admin/" --delete
 
       - name: Publish the root redirect (bare CloudFront URL -> the simulation)
         run: |
