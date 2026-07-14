@@ -564,7 +564,8 @@
       g.userData.isTray = true;
       g.userData.num = (t.num != null) ? t.num : (i + 1);
       const label = hoodNum(g.userData.num);
-      const ef = (Math.cos(g.rotation.y) >= 0) ? 1 : -1;   // which way along the tray axis the car (hood) faces
+      let ef = (Math.cos(g.rotation.y) >= 0) ? 1 : -1;     // which way along the tray axis the car (hood) faces
+      if (g.userData.num === 1) ef = -ef;                  // car 1's model is flipped, so its hood is at the opposite end
       label.position.set(ef * 1.35, 0.9, 0);               // on the hood (front), just above it
       label.rotation.x = -Math.PI / 2;                     // lie flat on the hood
       if (ef < 0) label.rotation.z = Math.PI;              // keep the digits upright when the hood faces -X
