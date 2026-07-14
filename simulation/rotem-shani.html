@@ -765,7 +765,7 @@
     let liftGroup = null, liftPlatform = null;
     const LIFT_PLAT_Y = -0.1;   // platform is 0.2 thick -> its TOP rests at y=0 (the tray's base), so a tray
                                 // boarding it sits flush ON it (not swallowed). It drops into a pit (below).
-    const LIFT_REST_Y = LIFT_PLAT_Y - 0.8;   // at rest the platform floor sits 80cm below the garage floor (top at -0.8), in an open pit
+    const LIFT_REST_Y = LIFT_PLAT_Y - 0.4;   // platform floor rests ~40cm below the garage floor, in an open pit (visible from angled views)
     const liftSrc = (savedLayout && savedLayout.lift) ? savedLayout.lift : L.lift;
     if (liftSrc) {
       const lg = new THREE.Group();
@@ -815,15 +815,19 @@
           [lx + sx * hl * ux + sz * hw * vx, lz + sx * hl * uz + sz * hw * vz]);
         // ShapeGeometry/ExtrudeGeometry + rotateX(-PI/2) map shape.y -> world -Z, so negate Z to land the hole
         // on the lift's real world position (the bbox is ~symmetric in Z, which is why floor/grass looked fine).
-        liftHole = () => new THREE.Path(cn.map(c => new THREE.Vector2(c[0], -c[1])));
-        roofHole = liftHole;   // (roof opening = same as the floor opening; the roof was ruled out as the occluder)
-        // dig a shallow PIT under the lift: cut the garage floor here so the lowered platform (top at y=0)
-        // drops into a lined recess, and a boarding tray sits flush on the platform instead of inside it.
+        // A hole is only subtracted by ShapeGeometry if it winds OPPOSITE the outer contour. Force that here —
+        // otherwise the opening never gets cut and the solid floor hides the whole pit (the bug we were chasing).
+        const _contour = shapePts.map(p => new THREE.Vector2(p.x, -p.y));
+        liftHole = () => { const p = cn.map(c => new THREE.Vector2(c[0], -c[1]));
+          if (THREE.ShapeUtils.isClockWise(p) === THREE.ShapeUtils.isClockWise(_contour)) p.reverse();
+          return new THREE.Path(p); };
+        roofHole = liftHole;   // same opening for the roof surfaces (ceiling / grass)
+        // cut the garage floor OPEN over the lift so the pit and the platform below are visible
         { const fShape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.y)));
           fShape.holes.push(liftHole());
           const fGeo = new THREE.ShapeGeometry(fShape); fGeo.rotateX(-Math.PI / 2);
           floor.geometry.dispose(); floor.geometry = fGeo; }
-        const PITD = 1.0, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // 80cm open pit under the lift (walls 0..-1.0, platform floor at -0.8)
+        const PITD = 0.6, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // open pit under the lift (walls 0..-0.6, platform floor at -0.4)
         // visible grey concrete pit walls (self-lit so the open shaft reads clearly even in full-dark mode)
         const pitMat = new THREE.MeshStandardMaterial({ color: 0x5b616b, roughness: 1.0, metalness: 0.0,
           emissive: 0x3d424b, emissiveIntensity: 0.6 });
