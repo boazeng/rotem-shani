@@ -824,7 +824,9 @@
           const fGeo = new THREE.ShapeGeometry(fShape); fGeo.rotateX(-Math.PI / 2);
           floor.geometry.dispose(); floor.geometry = fGeo; }
         const PITD = 1.0, WT = 0.08, iw = 2 * hl, idp = 2 * hw;   // 80cm open pit under the lift (walls 0..-1.0, platform floor at -0.8)
-        const pitMat = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 1.0, metalness: 0.0 });
+        // visible grey concrete pit walls (self-lit so the open shaft reads clearly even in full-dark mode)
+        const pitMat = new THREE.MeshStandardMaterial({ color: 0x5b616b, roughness: 1.0, metalness: 0.0,
+          emissive: 0x3d424b, emissiveIntensity: 0.6 });
         const pit = new THREE.Group(); pit.position.set(lx, 0, lz); pit.rotation.y = lry;
         const bot = new THREE.Mesh(new THREE.BoxGeometry(iw + 2 * WT, 0.05, idp + 2 * WT), pitMat);
         bot.position.y = -PITD; bot.receiveShadow = true; pit.add(bot);
@@ -1495,26 +1497,40 @@
       const lux = Math.cos(lry), luz = -Math.sin(lry);
       const ix = lx + lux * (ttz - lz) / (luz || 1e-9);      // E3: lift axis at the turntable row
       const home = homePos(g);                                // P1 (car 1's canonical spot)
-      const e4x = lx + lux * (home.z - lz) / (luz || 1e-9);   // E4: lift axis at car-1's row
       return { tray: g, end: { x: home.x, z: home.z, ry: faceLift, y: 0 }, steps: [
         { type: 'liftup', to: 0, dur: Math.max(0.4, H / CFG.lift) },                            // descend on the lift
         { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(lx - ix, lz - ttz)) },       // EL -> E3
         { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },                 // E3 -> W1 (onto the turntable)
         { type: 'turn', to: faceLift, dur: spinDur(180) },                                       // spin ~180° to face the LIFT
         { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },                  // W1 -> E3 (back to the lift axis)
-        { type: 'move', to: { x: e4x, z: home.z }, dur: dur(Math.hypot(ix - e4x, ttz - home.z)) }, // E3 -> E4 (along the axis)
-        { type: 'move', to: { x: home.x, z: home.z }, dur: dur(Math.abs(e4x - home.x)) },        // E4 -> P1 (into the spur)
+        { type: 'move', to: { x: home.x, z: home.z }, dur: dur(Math.hypot(ix - home.x, ttz - home.z)) }, // E3 -> P1
+      ] };
+    }
+    // the rise half: P1 -> E3 -> W1 -> spin to `faceOut` -> E3 -> EL -> up (mirror of car1Descent, via E3)
+    function car1Ascent(g, faceOut) {
+      const ttx = turntableGroup.position.x, ttz = turntableGroup.position.z;
+      const lx = liftGroup.position.x, lz = liftGroup.position.z, lry = liftGroup.rotation.y;
+      const lux = Math.cos(lry), luz = -Math.sin(lry);
+      const ix = lx + lux * (ttz - lz) / (luz || 1e-9);      // E3
+      const home = homePos(g);                                // P1
+      return { tray: g, end: { x: lx, z: lz, ry: faceOut, y: H }, steps: [
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.hypot(home.x - ix, home.z - ttz)) }, // P1 -> E3
+        { type: 'move', to: { x: ttx, z: ttz }, dur: dur(Math.abs(ix - ttx)) },                   // E3 -> W1
+        { type: 'turn', to: faceOut, dur: spinDur(180) },                                         // spin to face OUT (toward the exit)
+        { type: 'move', to: { x: ix, z: ttz }, dur: dur(Math.abs(ttx - ix)) },                    // W1 -> E3
+        { type: 'move', to: { x: lx, z: lz }, dur: dur(Math.hypot(ix - lx, ttz - lz)) },          // E3 -> EL
+        { type: 'liftup', to: H, dur: Math.max(0.4, H / CFG.lift) },                              // rise onto the lift
       ] };
     }
     function car1Cycle() {
       const g = trayGroups.find(t => t.userData.isTray && t.userData.num === 1);
       if (!g) { flash('לא נמצא רכב 1'); return; }
       if (!turntableGroup || !liftGroup) { flash('אין מעלית/צלחת'); return; }
-      // rest orientation at P1 = car 1's saved home rotation (now flipped 180° to face the lift).
-      const faceLift = homeRy(g);
-      const up = fullExit(g);                    // rise: P1 -> W1 -> face out -> E3 -> EL -> up (like an exit)
-      const down = car1Descent(g, faceLift);     // descend -> W1 -> spin 180° (face lift) -> E3 -> E4 -> P1
-      down.onDone = () => flash('רכב 1 — ירידה מהמעלית, סיבוב ב-W1, חניה מול המעלית ✓');
+      const faceLift = homeRy(g);              // rest orientation at P1 (flipped 180° to face the lift)
+      const faceOut = faceLift + Math.PI;      // opposite: how it sits on the lift (back to the lift)
+      const up = car1Ascent(g, faceOut);       // rise via E3, spinning to face out on the way up
+      const down = car1Descent(g, faceLift);   // descend -> W1 -> spin 180° to face the lift -> E3 -> P1
+      down.onDone = () => flash('רכב 1 — ירידה מהמעלית, סיבוב 180° ב-W1, חניה מול המעלית ✓');
       runTasks([up, down]);
       flash('תנועת רכב 1');
     }
@@ -1529,11 +1545,11 @@
       E1: ['P23', 'P24', 'W1'],
       P24: ['E1', 'P20'],
       P23: ['P21', 'P14', 'E1'],
-      E3: ['EL', 'W1'],
+      E3: ['EL', 'W1', 'P1'],   // xlsx update: car 1 (P1) now reaches the corridor via E3 (not E4)
       EL: ['E3', 'E4'],
-      E4: ['P1', 'EL'],
+      E4: ['EL'],               // E4 no longer on car 1's route (P1<->E3 replaced P1<->E4)
       W1: ['E1', 'P5', 'E3'],
-      P1: ['E4'],
+      P1: ['E3'],               // xlsx update: P1 connects only to E3
       P2: ['P6', 'P3', 'P9'],
       P3: ['P2', 'P4'],
       P4: ['P3', 'P5', 'P8', 'P11'],
