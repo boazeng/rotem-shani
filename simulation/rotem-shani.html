@@ -113,6 +113,7 @@
     #settings h2 { font-size: 13px; margin-bottom: 6px; }
     #settings label { margin: 4px 0; gap: 6px; }
     #settings input { width: 52px; padding: 3px 5px; font-size: 12px; }
+    #settings select { padding: 3px 5px; font-size: 12px; background: #0f1626; color: #eaf3ff; border: 1px solid #35538a; border-radius: 4px; }
     #settings .divider { margin: 7px 0; }
     #settings .simbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
     #settings .simbtns button {
@@ -191,6 +192,15 @@
     <label>סיבוב צלחת <span class="u">°/ש'</span><input type="number" id="cfgSpin" value="120" step="10" min="10"></label>
     <label>מהירות מעלית <span class="u">מ׳/ש'</span><input type="number" id="cfgLift" value="1.0" step="0.5" min="0.1"></label>
     <label>השהיה בין משטחים <span class="u">ש'</span><input type="number" id="cfgGap" value="0.5" step="0.1" min="0"></label>
+    <label>הגברת מהירות <select id="cfgSpeed" title="מאיץ את כל הסימולציה תוך שמירה על היחסיות בין המהירויות">
+      <option value="1">×1 (רגיל)</option>
+      <option value="1.5">×1.5</option>
+      <option value="2">×2</option>
+      <option value="3">×3</option>
+      <option value="4">×4</option>
+      <option value="6">×6</option>
+      <option value="8">×8</option>
+    </select></label>
     <div class="divider"></div>
     <label>מספר רכב <input type="number" id="cfgCar" value="8" min="2" max="22"></label>
     <div class="simbtns">
@@ -1035,7 +1045,7 @@
     document.getElementById('tFloor').onchange = e => { floor.visible = e.target.checked; };
 
     // apply the default view state (from the checkboxes above) on load
-    ['tPlan', 'tNums', 'tCenters', 'tGuides', 'tCeil', 'tGrass', 'tCars', 'tGrid', 'tDark', 'tFluor', 'tFloor'].forEach(id => {
+    ['tPlan', 'tNums', 'tSpots', 'tCenters', 'tGuides', 'tCeil', 'tGrass', 'tCars', 'tGrid', 'tDark', 'tFluor', 'tFloor'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.onchange) el.onchange({ target: el });
     });
@@ -1406,7 +1416,7 @@
     }
     const easeInOut = k => k * k * (3 - 2 * k);
     // live timing config (edited from the ⚙ settings panel)
-    const CFG = { travel: 2.5, spin: 120, lift: 1.0, gap: 0.5 };   // m/s, deg/s, m/s, and convoy stagger gap(s)
+    const CFG = { travel: 2.5, spin: 120, lift: 1.0, gap: 0.5, speed: 1 };   // m/s, deg/s, m/s, convoy stagger gap(s), global time-scale
     const dur = d => Math.max(0.2, d / CFG.travel);
     const spinDur = deg => Math.max(0.2, Math.abs(deg) / CFG.spin);
 
@@ -2217,13 +2227,15 @@
     const cfgSpin = document.getElementById('cfgSpin');
     const cfgLift = document.getElementById('cfgLift');
     const cfgGap = document.getElementById('cfgGap');
+    const cfgSpeed = document.getElementById('cfgSpeed');
     function readCfg() {
       CFG.travel = Math.max(0.1, parseFloat(cfgTravel.value) || 2.5);
       CFG.spin = Math.max(1, parseFloat(cfgSpin.value) || 120);
       CFG.lift = Math.max(0.1, parseFloat(cfgLift.value) || 1.0);
       { const v = parseFloat(cfgGap.value); CFG.gap = isNaN(v) ? 0.5 : Math.max(0, v); }
+      CFG.speed = Math.max(0.25, parseFloat(cfgSpeed.value) || 1);   // global time-scale: same ratios, faster clock
     }
-    [cfgTravel, cfgSpin, cfgLift, cfgGap].forEach(el => el.addEventListener('change', readCfg));
+    [cfgTravel, cfgSpin, cfgLift, cfgGap, cfgSpeed].forEach(el => el.addEventListener('change', readCfg));
     readCfg();
     document.getElementById('runExtract').onclick = () =>
       runScenario(parseInt(document.getElementById('cfgCar').value, 10));
@@ -2240,7 +2252,7 @@
       if (t === undefined) t = lastT;
       const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
       lastT = t;
-      if (!paused) stepScenario(dt);
+      if (!paused) stepScenario(dt * CFG.speed);   // global speed multiplier — scales all motion uniformly
       if (boxHelper) boxHelper.update();
       drawCompass();
       renderer.render(scene, camera);
