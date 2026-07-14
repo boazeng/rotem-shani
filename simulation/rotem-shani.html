@@ -12,14 +12,14 @@
     #hud {
       position: fixed; top: 12px; right: 12px; z-index: 10;
       background: rgba(14,20,36,0.82); color: #dbe6ff; border: 1px solid #24406e;
-      border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7;
-      backdrop-filter: blur(6px); min-width: 210px;
+      border-radius: 10px; padding: 8px 10px; font-size: 11px; line-height: 1.35;
+      backdrop-filter: blur(6px); min-width: 158px;
     }
-    #hud h1 { font-size: 15px; margin-bottom: 6px; color: #7fd0ff; }
+    #hud h1 { font-size: 12.5px; margin-bottom: 4px; color: #7fd0ff; cursor: move; }
     #hud .row { display: flex; justify-content: space-between; gap: 10px; }
     #hud .k { color: #8ea6cf; }
-    #hud .legend { margin-top: 8px; border-top: 1px solid #24406e; padding-top: 8px; }
-    #hud .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+    #hud .legend { margin-top: 5px; border-top: 1px solid #24406e; padding-top: 5px; }
+    #hud .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-left: 5px; vertical-align: middle; }
     #help {
       position: fixed; bottom: 12px; right: 12px; z-index: 10;
       background: rgba(14,20,36,0.7); color: #9fb3d9; border: 1px solid #24406e;
@@ -96,15 +96,16 @@
     #settings input { user-select: text; -webkit-user-select: text; }
     #topbar {
       position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 12;
-      display: flex; align-items: center; gap: 8px;
-      background: rgba(14,20,36,0.85); border: 1px solid #24406e; border-radius: 10px;
-      padding: 6px 10px; backdrop-filter: blur(6px);
+      display: flex; align-items: center; gap: 5px; cursor: move;
+      background: rgba(14,20,36,0.85); border: 1px solid #24406e; border-radius: 9px;
+      padding: 4px 7px; backdrop-filter: blur(6px);
     }
     #topbar button {
-      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
-      padding: 6px 12px; font-size: 14px; cursor: pointer;
+      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 6px;
+      padding: 4px 9px; font-size: 12.5px; cursor: pointer;
     }
     #topbar button:hover { background: #274068; }
+    #settings h2, #buildPanel h2 { cursor: move; }   /* drag handle for repositioning */
     #topbar button.tab.active { background: #b06a1e; border-color: #e0a458; color: #fff3e0; }
     #topbar .tsep { width: 1px; height: 22px; background: #35538a; margin: 0 2px; }
     /* ---- compact simulation panel ---- */
@@ -1188,6 +1189,34 @@
     togglePanel('btnHud', 'hud');
     togglePanel('btnBuild', 'buildPanel');
     togglePanel('btnSim', 'settings');
+    // make the panels draggable so the user can reposition them; positions persist in localStorage.
+    // dragging starts on "chrome" areas only (never on a button/input/label), so controls keep working.
+    function makeDraggable(panel) {
+      if (!panel) return;
+      const KEY = 'pos_' + panel.id;
+      try { const s = JSON.parse(localStorage.getItem(KEY));
+        if (s && s.left) { panel.style.left = s.left; panel.style.top = s.top; panel.style.right = 'auto'; panel.style.transform = 'none'; }
+      } catch (e) {}
+      let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+      panel.addEventListener('mousedown', e => {
+        if (e.target.closest('button, input, label, select, a')) return;   // let controls work
+        const r = panel.getBoundingClientRect();
+        panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px';
+        panel.style.right = 'auto'; panel.style.transform = 'none';
+        dragging = true; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        panel.style.left = Math.max(0, Math.min(window.innerWidth - 40, ox + e.clientX - sx)) + 'px';
+        panel.style.top = Math.max(0, Math.min(window.innerHeight - 30, oy + e.clientY - sy)) + 'px';
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return; dragging = false;
+        try { localStorage.setItem(KEY, JSON.stringify({ left: panel.style.left, top: panel.style.top })); } catch (e) {}
+      });
+    }
+    ['topbar', 'hud', 'settings', 'buildPanel'].forEach(id => makeDraggable(document.getElementById(id)));
     document.getElementById('wall').onclick = () => {
       if (!editMode && !wallMode) { flash('הפעל "עדכן" כדי לבנות'); return; }
       setWallMode(!wallMode);
