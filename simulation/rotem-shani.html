@@ -89,6 +89,39 @@
     }
     #settings .go:hover { background: #1b4e78; }
     #settings .go.prim { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
+    /* ---- 🎬 video recording panel ---- */
+    #recPanel {
+      position: fixed; left: 12px; bottom: 56px; z-index: 11;
+      background: rgba(14,20,36,0.9); color: #dbe6ff; border: 1px solid #24406e;
+      border-radius: 10px; padding: 12px 14px; font-size: 13px; backdrop-filter: blur(6px);
+      width: 256px; max-height: 74vh; display: flex; flex-direction: column;
+      user-select: none; -webkit-user-select: none;
+    }
+    #recPanel h2 { font-size: 14px; margin-bottom: 8px; color: #ff8a5c; cursor: move; }
+    #recPanel .rrow { display: flex; gap: 6px; margin: 6px 0; }
+    #recPanel button {
+      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
+      padding: 6px 10px; font-size: 13px; cursor: pointer; flex: 1;
+    }
+    #recPanel button:hover { background: #274068; }
+    #recPanel button.rec { background: #5a1f24; border-color: #8a353f; color: #ffd0d0; }
+    #recPanel button.rec:hover { background: #742a30; }
+    #recPanel button.rec.on { background: #c0392b; border-color: #e05a48; color: #fff; }
+    #recPanel .shots { overflow-y: auto; margin: 6px 0; display: flex; flex-direction: column; gap: 5px; min-height: 24px; }
+    #recPanel .shot { display: flex; align-items: center; gap: 6px;
+      background: #0f1626; border: 1px solid #24406e; border-radius: 7px; padding: 5px 7px; }
+    #recPanel .shot .idx { color: #7fd0ff; font-weight: 700; min-width: 16px; }
+    #recPanel .shot input { width: 44px; background: #0b1220; color: #eaf3ff; border: 1px solid #35538a;
+      border-radius: 5px; padding: 3px 4px; text-align: center; font-size: 12px; user-select: text; }
+    #recPanel .shot .u { color: #8ea6cf; font-size: 11px; }
+    #recPanel .shot .mini { flex: 0 0 auto; background: #1c2c4a; border: 1px solid #35538a; border-radius: 5px;
+      color: #cfe2ff; cursor: pointer; padding: 2px 6px; font-size: 12px; }
+    #recPanel .shot .mini.del { background: #3a1a1e; border-color: #7a2f37; color: #ffbcbc; }
+    #recPanel .rhint { color: #8ea6cf; font-size: 11px; margin: 4px 0; }
+    #recPanel .optrow { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 4px 0; }
+    #recPanel .optrow input[type=number] { width: 44px; background: #0f1626; color: #eaf3ff;
+      border: 1px solid #35538a; border-radius: 5px; padding: 3px 4px; text-align: center; user-select: text; }
+    #recPanel select { background: #0f1626; color: #eaf3ff; border: 1px solid #35538a; border-radius: 5px; padding: 3px 5px; font-size: 12px; }
     /* ---- top toolbar: show/hide the panels ---- */
     .hidden { display: none !important; }
     /* panels must not text-select when the mouse drags over them (camera rotation) */
@@ -152,6 +185,7 @@
     <button id="btnHud" class="tab active" title="פאנל המתקן — רותם שני">🏢 רותם שני</button>
     <button id="btnBuild" class="tab" title="תפריט בניה ועריכה">🔨 בניה</button>
     <button id="btnSim" class="tab active" title="תפריט סימולציה">⚙ סימולציה</button>
+    <button id="btnRec" class="tab" title="הקלטת סרטון — נקודות צילום ומעבר חלק">🎬 סרטון</button>
     <span class="tsep"></span>
     <button id="top" title="מבט על">⬇ מבט על</button>
     <span class="tsep"></span>
@@ -226,6 +260,24 @@
     <div id="selinfo">לא נבחר משטח</div>
   </div>
 
+  <div id="recPanel" class="hidden">
+    <h2>🎬 הקלטת סרטון</h2>
+    <div class="rrow"><button id="recAdd" title="הוסף את זווית המצלמה הנוכחית כנקודת צילום">➕ הוסף נקודת צילום</button></div>
+    <div id="recShots" class="shots"></div>
+    <div class="rhint" id="recTotal"></div>
+    <label class="optrow"><input type="checkbox" id="recRunScenario"> הרץ חילוץ רכב
+      <input type="number" id="recCar" value="8" min="1" max="22"> בהקלטה</label>
+    <label class="optrow">איכות
+      <select id="recFps"><option value="30">30fps</option><option value="60">60fps</option><option value="24">24fps</option></select>
+    </label>
+    <div class="rrow">
+      <button id="recPlay" title="תצוגה מקדימה של המסלול (בלי הקלטה)">▶ תצוגה</button>
+      <button id="recRecord" class="rec" title="הקלט את המסלול לקובץ וידאו (WebM)">⏺ הקלט</button>
+    </div>
+    <div class="rrow"><button id="recStop" title="עצור הקלטה/תצוגה">⏹ עצור</button></div>
+    <div class="rhint">סובב/גרור את המצלמה למקום הרצוי → "הוסף נקודת צילום". קבע משך מעבר לכל נקודה. "הקלט" מפיק קובץ WebM.</div>
+  </div>
+
   <canvas id="compass" width="84" height="84"></canvas>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -249,7 +301,7 @@
     scene.fog = new THREE.Fog(0x2a3752, 60, 220);   // dusk-blue sky/void so outside reads lit even in full-dark mode
 
     const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('app'), antialias: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('app'), antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(innerWidth, innerHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -2246,6 +2298,88 @@
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       renderer.setSize(innerWidth, innerHeight);
     });
+    // ============ 🎬 VIDEO RECORDING — camera keyframes + smooth tour + canvas capture ============
+    const camShots = [];         // [{ dur, cam:{tx,ty,tz,radius,theta,phi} }]
+    let tour = null;             // active tour/recording state
+    const camState = () => ({ tx: target.x, ty: target.y, tz: target.z, radius, theta, phi });
+    function setCam(c) { target.set(c.tx, c.ty, c.tz); radius = c.radius; theta = c.theta; phi = c.phi; applyCam(); }
+    const shortAng = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
+    const smoothE = t => t * t * (3 - 2 * t);   // ease in/out
+    const lerpCam = (a, b, e) => ({
+      tx: a.tx + (b.tx - a.tx) * e, ty: a.ty + (b.ty - a.ty) * e, tz: a.tz + (b.tz - a.tz) * e,
+      radius: a.radius + (b.radius - a.radius) * e, theta: a.theta + shortAng(a.theta, b.theta) * e, phi: a.phi + (b.phi - a.phi) * e });
+    function renderShots() {
+      const box = document.getElementById('recShots');
+      box.innerHTML = camShots.map((s, i) => `<div class="shot">
+        <span class="idx">${i + 1}</span>
+        <button class="mini" data-go="${i}" title="עבור לזווית זו">👁</button>
+        <input type="number" data-dur="${i}" value="${s.dur}" min="0.2" step="0.5" title="משך המעבר לנקודה זו"><span class="u">ש'</span>
+        <button class="mini del" data-del="${i}" title="מחק">🗑</button></div>`).join('')
+        || '<div class="rhint">אין נקודות צילום עדיין.</div>';
+      const total = camShots.reduce((a, s) => a + (+s.dur || 0), 0);
+      document.getElementById('recTotal').textContent = camShots.length ? `${camShots.length} נקודות · סה"כ ${total.toFixed(1)} ש'` : '';
+      box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setCam(camShots[+b.dataset.go].cam));
+      box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { camShots.splice(+b.dataset.del, 1); renderShots(); });
+      box.querySelectorAll('[data-dur]').forEach(inp => inp.onchange = () => { camShots[+inp.dataset.dur].dur = Math.max(0.2, +inp.value || 1); renderShots(); });
+    }
+    document.getElementById('recAdd').onclick = () => { camShots.push({ dur: camShots.length ? 3 : 1, cam: camState() }); renderShots(); flash('נוספה נקודת צילום ' + camShots.length); };
+    function buildTimeline() {
+      const segs = []; let t0 = Math.max(0.2, camShots[0].dur);
+      segs.push({ start: 0, end: t0, from: camShots[0].cam, to: camShots[0].cam });   // hold on the first shot
+      for (let k = 1; k < camShots.length; k++) { const d = Math.max(0.2, camShots[k].dur); segs.push({ start: t0, end: t0 + d, from: camShots[k - 1].cam, to: camShots[k].cam }); t0 += d; }
+      return { segs, total: t0 };
+    }
+    function updateTour(nowMs) {
+      const el = (nowMs - tour.startMs) / 1000;
+      if (el >= tour.total) { setCam(camShots[camShots.length - 1].cam); endTour(); return; }
+      let seg = tour.segs[0];
+      for (const s of tour.segs) { if (el >= s.start && el < s.end) { seg = s; break; } }
+      const local = seg.end > seg.start ? (el - seg.start) / (seg.end - seg.start) : 1;
+      setCam(lerpCam(seg.from, seg.to, smoothE(Math.max(0, Math.min(1, local)))));
+    }
+    function startTour(record) {
+      if (tour) { flash('כבר מקליט/מנגן'); return; }
+      if (camShots.length < 1) { flash('הוסף לפחות נקודת צילום אחת'); return; }
+      const { segs, total } = buildTimeline();
+      setCam(camShots[0].cam);
+      tour = { segs, total, startMs: performance.now(), record, recorder: null, chunks: [] };
+      if (document.getElementById('recRunScenario').checked) {   // optionally run the process on camera
+        const n = parseInt(document.getElementById('recCar').value, 10);
+        if (!isNaN(n)) setTimeout(() => { try { runScenario(n); } catch (e) {} }, 300);
+      }
+      if (record) {
+        try {
+          const fps = parseInt(document.getElementById('recFps').value, 10) || 30;
+          const stream = renderer.domElement.captureStream(fps);
+          const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+          const mime = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+          tour.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : undefined);
+          tour.recorder.ondataavailable = e => { if (e.data && e.data.size) tour.chunks.push(e.data); };
+          tour.recorder.onstop = () => {
+            const blob = new Blob(tour.chunks, { type: 'video/webm' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = 'rotem-shani-' + Date.now() + '.webm'; a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000); flash('הסרטון נשמר ✓');
+          };
+          tour.recorder.start();
+        } catch (err) { tour.record = false; flash('הקלטה לא נתמכת: ' + err.message); }
+      }
+      document.getElementById('recRecord').classList.toggle('on', !!(tour && tour.recorder));
+      flash(tour.recorder ? 'מקליט…' : 'מנגן מסלול…');
+    }
+    function endTour() {
+      if (!tour) return;
+      const rec = tour.recorder; tour = null;
+      document.getElementById('recRecord').classList.remove('on');
+      if (rec && rec.state !== 'inactive') rec.stop();
+    }
+    document.getElementById('recPlay').onclick = () => startTour(false);
+    document.getElementById('recRecord').onclick = () => startTour(true);
+    document.getElementById('recStop').onclick = () => endTour();
+    togglePanel('btnRec', 'recPanel');
+    makeDraggable(document.getElementById('recPanel'));
+    renderShots();
+
     let lastT = 0;
     function animate(t) {
       requestAnimationFrame(animate);
@@ -2253,6 +2387,7 @@
       const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
       lastT = t;
       if (!paused) stepScenario(dt * CFG.speed);   // global speed multiplier — scales all motion uniformly
+      if (tour) updateTour(t);                      // 🎬 drive the camera along the recording tour
       if (boxHelper) boxHelper.update();
       drawCompass();
       renderer.render(scene, camera);
