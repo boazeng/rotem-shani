@@ -21,3 +21,4 @@ scratch_*.png
 server/.env
 database/
 *.db
+recordings/

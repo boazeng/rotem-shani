@@ -13,13 +13,16 @@ Run locally:
 """
 import json
 import os
+import shutil
+import subprocess
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()  # read server/.env before shared-auth reads os.environ
 
-from fastapi import Depends, FastAPI, Request                       # noqa: E402
+from fastapi import Depends, FastAPI, File, Request, UploadFile      # noqa: E402
 from fastapi.responses import HTMLResponse, RedirectResponse         # noqa: E402
 from fastapi.staticfiles import StaticFiles                          # noqa: E402
 
@@ -32,6 +35,8 @@ SIM_DIR = ROOT / "simulation"
 DASH_DIR = ROOT / "admin"              # the parking operations dashboard (built earlier)
 SAVED_FILE = SIM_DIR / "rotem_saved.json"
 TEMPLATES = HERE / "templates"
+RECORDINGS_DIR = ROOT / "recordings"   # saved videos (untracked; served behind auth)
+RECORDINGS_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="Rotem Shani — Parking", docs_url=None, redoc_url=None)
 
@@ -88,8 +93,62 @@ async def admin_only(user: dict = Depends(require_role("admin"))):
     return _page("admin_only.html").replace("{{EMAIL}}", user["email"])
 
 
+# --- video recordings: the sim uploads a WebM here; we transcode to MP4 (H.264)
+#     with ffmpeg so it plays anywhere, and save it on the server. ---
+@app.post("/rec/upload", include_in_schema=False)
+async def rec_upload(file: UploadFile = File(...), _admin: dict = Depends(require_role("admin"))):
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    tmp = RECORDINGS_DIR / f".upload-{ts}.webm"
+    with tmp.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        out = RECORDINGS_DIR / f"rotem-{ts}.mp4"
+        try:
+            subprocess.run(
+                [ffmpeg, "-y", "-i", str(tmp), "-c:v", "libx264", "-preset", "veryfast",
+                 "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", str(out)],
+                check=True, capture_output=True, timeout=600)
+            tmp.unlink(missing_ok=True)
+            return {"ok": True, "name": out.name, "url": f"/rec/files/{out.name}", "mp4": True}
+        except Exception as exc:  # conversion failed -> keep the webm so nothing is lost
+            keep = RECORDINGS_DIR / f"rotem-{ts}.webm"
+            tmp.rename(keep)
+            return {"ok": True, "name": keep.name, "url": f"/rec/files/{keep.name}",
+                    "mp4": False, "warn": f"mp4 conversion failed: {exc}"}
+    keep = RECORDINGS_DIR / f"rotem-{ts}.webm"
+    tmp.rename(keep)
+    return {"ok": True, "name": keep.name, "url": f"/rec/files/{keep.name}", "mp4": False,
+            "warn": "ffmpeg not installed — saved as webm"}
+
+
+@app.get("/rec/list", include_in_schema=False)
+async def rec_list(_admin: dict = Depends(require_role("admin"))):
+    files = sorted(
+        (p for p in RECORDINGS_DIR.iterdir()
+         if p.suffix in (".mp4", ".webm") and not p.name.startswith(".")),
+        key=lambda p: p.stat().st_mtime, reverse=True)
+    return {"files": [{"name": p.name, "url": f"/rec/files/{p.name}",
+                       "size": p.stat().st_size, "mtime": int(p.stat().st_mtime)} for p in files]}
+
+
+@app.post("/rec/delete", include_in_schema=False)
+async def rec_delete(body: dict, _admin: dict = Depends(require_role("admin"))):
+    name = os.path.basename(body.get("name", ""))   # prevent path traversal
+    p = RECORDINGS_DIR / name
+    if p.exists() and p.suffix in (".mp4", ".webm"):
+        p.unlink()
+    return {"ok": True}
+
+
+@app.get("/rec", response_class=HTMLResponse, include_in_schema=False)
+async def rec_page(_admin: dict = Depends(require_role("admin"))):
+    return _page("recordings.html")
+
+
 # ---- static apps (behind the auth middleware) ----
 # the simulation (HTML + JSON + PNG + the .glb models) and the ops dashboard
+app.mount("/rec/files", StaticFiles(directory=str(RECORDINGS_DIR)), name="rec-files")
 app.mount("/dashboard", StaticFiles(directory=str(DASH_DIR), html=True), name="dashboard")
 # the sim's "מרכז ניהול" button opens ./admin/index.html (relative to /sim/rotem-shani.html) — serve the
 # dashboard there too so that link resolves. MUST be registered before /sim so it matches first.

@@ -272,10 +272,12 @@
     </label>
     <div class="rrow">
       <button id="recPlay" title="תצוגה מקדימה של המסלול (בלי הקלטה)">▶ תצוגה</button>
-      <button id="recRecord" class="rec" title="הקלט את המסלול לקובץ וידאו (WebM)">⏺ הקלט</button>
+      <button id="recRecord" class="rec" title="הקלט את המסלול — נשמר בשרת כ-MP4">⏺ הקלט</button>
     </div>
     <div class="rrow"><button id="recStop" title="עצור הקלטה/תצוגה">⏹ עצור</button></div>
-    <div class="rhint">סובב/גרור את המצלמה למקום הרצוי → "הוסף נקודת צילום". קבע משך מעבר לכל נקודה. "הקלט" מפיק קובץ WebM.</div>
+    <div class="rhint" id="recSaved"></div>
+    <div class="rrow"><button id="recLibrary" title="עמוד הסרטונים השמורים בשרת">📁 סרטונים שמורים</button></div>
+    <div class="rhint">סובב/גרור את המצלמה למקום הרצוי → "הוסף נקודת צילום". קבע משך מעבר לכל נקודה. "הקלט" מפיק MP4 שנשמר בשרת.</div>
   </div>
 
   <canvas id="compass" width="84" height="84"></canvas>
@@ -2353,19 +2355,38 @@
           const stream = renderer.domElement.captureStream(fps);
           const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
           const mime = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
-          tour.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : undefined);
-          tour.recorder.ondataavailable = e => { if (e.data && e.data.size) tour.chunks.push(e.data); };
-          tour.recorder.onstop = () => {
-            const blob = new Blob(tour.chunks, { type: 'video/webm' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = 'rotem-shani-' + Date.now() + '.webm'; a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 5000); flash('הסרטון נשמר ✓');
-          };
-          tour.recorder.start();
+          const chunks = [];   // closure — survives after `tour` is cleared in endTour()
+          const mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : undefined);
+          mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+          mr.onstop = () => finishRecording(chunks);
+          tour.recorder = mr;
+          mr.start();
         } catch (err) { tour.record = false; flash('הקלטה לא נתמכת: ' + err.message); }
       }
       document.getElementById('recRecord').classList.toggle('on', !!(tour && tour.recorder));
       flash(tour.recorder ? 'מקליט…' : 'מנגן מסלול…');
+    }
+    // when recording stops: upload the clip to the server (which transcodes to MP4 and stores it);
+    // if there is no server endpoint (opened locally), fall back to a local WebM download.
+    async function finishRecording(chunks) {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const saved = document.getElementById('recSaved');
+      try {
+        const fd = new FormData(); fd.append('file', blob, 'rec.webm');
+        flash('מעלה וממיר ל-MP4…');
+        const r = await fetch('/rec/upload', { method: 'POST', body: fd });
+        if (r.ok) {
+          const j = await r.json();
+          if (saved) saved.innerHTML = 'נשמר בשרת: <a href="' + j.url + '" target="_blank">' + (j.mp4 ? '▶ צפה ב-MP4' : '▶ צפה (WebM)') + '</a>';
+          flash(j.mp4 ? 'נשמר בשרת כ-MP4 ✓' : 'נשמר בשרת ✓');
+          return;
+        }
+      } catch (e) { /* no server (local) -> download instead */ }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'rotem-shani-' + Date.now() + '.webm'; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      if (saved) saved.textContent = 'ירד קובץ WebM למחשב (אין שרת לשמירה).';
+      flash('הסרטון ירד (WebM)');
     }
     function endTour() {
       if (!tour) return;
@@ -2376,6 +2397,7 @@
     document.getElementById('recPlay').onclick = () => startTour(false);
     document.getElementById('recRecord').onclick = () => startTour(true);
     document.getElementById('recStop').onclick = () => endTour();
+    document.getElementById('recLibrary').onclick = () => window.open('/rec', '_blank');
     togglePanel('btnRec', 'recPanel');
     makeDraggable(document.getElementById('recPanel'));
     renderShots();

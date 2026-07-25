@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>סרטונים שמורים — רותם שני</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0e1a'/%3E%3Cg fill='%2322c55e'%3E%3Cpath d='M10 40c0-2 1-3 3-3l4-9c1-2 3-4 6-4h18c3 0 5 2 6 4l4 9c2 0 3 1 3 3v6a2 2 0 0 1-2 2h-3a5 5 0 0 1-10 0H25a5 5 0 0 1-10 0h-3a2 2 0 0 1-2-2z'/%3E%3C/g%3E%3C/svg%3E" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap');
+    :root{--primary:#1F3A5F;--accent:#D64A2E;--pos:#2F8F5B;--bg:#FAF9F5;--white:#FFFEFB;--text:#2A2A28;--muted:#706A60;--border:#E7E2D6}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Heebo',Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:18px;height:64px;padding:0 24px;background:var(--white);border-bottom:1px solid var(--border)}
+    .logo{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.2rem;direction:ltr}
+    .logo b{color:var(--accent)}
+    .nav{display:flex;gap:4px;margin-inline-start:auto}
+    .nav a{padding:8px 15px;border-radius:999px;font-size:.9rem;font-weight:500;color:var(--muted)}
+    .nav a:hover{background:rgba(31,58,95,.12);color:var(--primary)}
+    .nav a.active{background:var(--primary);color:var(--white)}
+    .nav a.out{color:var(--accent)}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 24px}
+    h1{font-size:1.8rem;font-weight:800;color:var(--primary)}
+    .sub{color:var(--muted);margin:2px 0 24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+    .vid{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 4px 12px rgba(28,27,25,.06)}
+    .vid video{width:100%;display:block;background:#000;aspect-ratio:16/9;object-fit:contain}
+    .vid .meta{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .vid .nm{font-family:'Space Grotesk',sans-serif;font-size:.82rem;color:var(--primary);word-break:break-all}
+    .vid .dt{font-size:.75rem;color:var(--muted)}
+    .acts{display:flex;gap:6px}
+    .btn{font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--primary);text-decoration:none}
+    .btn:hover{border-color:var(--primary)}
+    .btn.d{color:var(--accent);border-color:transparent}
+    .btn.d:hover{background:rgba(214,74,46,.1)}
+    .badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(47,143,91,.12);color:var(--pos)}
+    .badge.webm{background:rgba(214,74,46,.12);color:var(--accent)}
+    .empty{color:var(--muted);padding:40px;text-align:center;background:var(--white);border:1px dashed var(--border);border-radius:14px}
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <span class="logo">T<b>·</b>A<b>·</b>C<b>·</b>T</span>
+    <nav class="nav">
+      <a href="/sim/rotem-shani.html">סימולציה</a>
+      <a href="/rec" class="active">סרטונים</a>
+      <a href="/manage">ניהול מערכת</a>
+      <a href="/logout" class="out">יציאה</a>
+    </nav>
+  </header>
+  <main class="wrap">
+    <h1>סרטונים שמורים</h1>
+    <div class="sub">סרטונים שהוקלטו בסימולציה ונשמרו בשרת (MP4). מקליטים דרך תפריט 🎬 בסימולציה.</div>
+    <div id="grid" class="grid"></div>
+  </main>
+  <script>
+    const fmtSize = b => b > 1e6 ? (b/1e6).toFixed(1)+' MB' : Math.max(1,Math.round(b/1e3))+' KB';
+    const fmtDate = t => new Date(t*1000).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'});
+    async function load(){
+      const r = await fetch('/rec/list'); const { files } = await r.json();
+      const g = document.getElementById('grid');
+      if(!files.length){ g.innerHTML = '<div class="empty">אין עדיין סרטונים. הקלט אחד דרך תפריט 🎬 בסימולציה.</div>'; return; }
+      g.innerHTML = files.map(f => {
+        const isMp4 = f.name.endsWith('.mp4');
+        return `<div class="vid">
+          <video src="${f.url}" controls preload="metadata"></video>
+          <div class="meta">
+            <div><div class="nm">${f.name}</div><div class="dt">${fmtDate(f.mtime)} · ${fmtSize(f.size)} <span class="badge ${isMp4?'':'webm'}">${isMp4?'MP4':'WEBM'}</span></div></div>
+            <div class="acts">
+              <a class="btn" href="${f.url}" download>הורד</a>
+              <button class="btn d" onclick="del('${f.name}')">מחק</button>
+            </div>
+          </div></div>`;
+      }).join('');
+    }
+    async function del(name){
+      if(!confirm('למחוק את '+name+'?')) return;
+      await fetch('/rec/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+      load();
+    }
+    load().catch(e => document.getElementById('grid').innerHTML = '<div class="empty">טעינה נכשלה: '+e.message+'</div>');
+  </script>
+</body>
+</html>
