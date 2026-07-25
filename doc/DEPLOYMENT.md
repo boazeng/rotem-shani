@@ -1,47 +1,96 @@
-# פריסה ל-AWS — S3 + CloudFront + פריסה אוטומטית
+# פריסה — שרת מאובטח (FastAPI + כניסת Google)
 
-הסימולציה מתארחת כאתר סטטי על **S3 מאחורי CloudFront** (HTTPS), ומתעדכנת **אוטומטית** בכל דחיפה ל-main דרך GitHub Actions.
+מיולי 2026 הסימולציה מתארחת כ**אפליקציית FastAPI מאחורי כניסת Google**, על שרת קטן ותמידי ב-AWS Lightsail. זה מחליף את האירוח הסטטי הישן ב-S3/CloudFront (ראה [למטה](#האירוח-הישן-s3cloudfront--הוצא-משירות)).
 
-## 🌐 כתובת האתר (חי)
+## 🌐 הכתובת החיה
 
-**https://dmfotw8kwayzt.cloudfront.net/rotem-shani/rotem-shani.html**
+**https://parkin-sim-rotem.newavera.co.il**
 
-(הכתובת הבסיסית `https://dmfotw8kwayzt.cloudfront.net/` מפנה אוטומטית לסימולציה.)
+הכניסה מפנה ל-`/sim/rotem-shani.html`. כל האתר (סימולציה, דשבורד, ניהול) **מאחורי כניסת Google** — רק אימייל שמנהל הוסיף רשאי להיכנס.
 
-## מבנה ב-AWS (חשבון 824980746386, region us-east-1)
+## מפת הנתיבים
 
-| משאב | ערך |
+| נתיב | גישה | תוכן |
+|---|---|---|
+| `/` | מחובר | → הסימולציה |
+| `/sim/rotem-shani.html` | מחובר | הסימולציה (סטטי, כולל המודלים) |
+| `/dashboard/` · `/sim/admin/` | מחובר | לוח בקרה תפעולי |
+| `/manage` | **admin** | ניהול מערכת + ניהול משתמשים |
+| `/admin-only` | **admin** | עמוד שרק מנהל רואה |
+| `/rec` · `/rec/files/*` | **admin** | סרטונים שמורים (MP4) |
+| `/save` · `/reset` | **admin** | שמירת/איפוס הפריסה לדיסק (כפתור 💾) |
+| `/login` `/auth/callback` `/auth/users` `/logout` … | (shared-auth) | כניסת Google + CRUD משתמשים |
+
+## הרכיבים (חשבון AWS 824980746386)
+
+| רכיב | ערך |
 |---|---|
-| **S3 bucket** | `parking-sim-frontend-824980746386` (פרטי — נגיש רק דרך CloudFront) |
-| מבנה תיקיות | `rotem-shani/` (HTML, JSON, PNG) · `rotem-shani/models/` (מודלי `.glb`) |
-| **CloudFront** | distribution `E2QO66F9BFH2JK` → `dmfotw8kwayzt.cloudfront.net` |
-| גישה ל-S3 | Origin Access Control (OAC) `E3OU890K99DNEA` + bucket policy |
-| **תפקיד פריסה (OIDC)** | `arn:aws:iam::824980746386:role/parking-sim-github-deploy` |
+| **Lightsail instance** | `parking-sim-rotem` — Ubuntu 24.04, `micro_3_0` (1GB RAM), us-east-1 |
+| **IP סטטי** | `44.223.250.97` |
+| **פורטים** | 22 (SSH), 80/443 (Caddy) |
+| **קוד** | git clone ב-`/opt/rotem` (repo `boazeng/rotem-shani`) |
+| **אפליקציה** | systemd service `rotem` — `uvicorn app:app` על `127.0.0.1:8100`, WorkingDirectory `/opt/rotem/server` |
+| **HTTPS** | **Caddy** — reverse-proxy ל-:8100 + תעודת Let's Encrypt אוטומטית (`/etc/caddy/Caddyfile`) |
+| **אימות** | מודול [`shared-auth`](https://github.com/boazeng/shared-auth) (FastAPI, Google OIDC) — מותקן מ-`/opt/shared-auth` |
+| **DB משתמשים** | SQLite ב-`/opt/rotem/database/auth.db` |
+| **וידאו** | `ffmpeg` (המרה ל-MP4), נשמר ב-`/opt/rotem/recordings/` |
+| **super-admin** | `boazen@gmail.com` (תמיד admin, לא ניתן להסרה) |
 
-> "parking sim" = ה-bucket (הפרויקט); תחתיו התיקייה `rotem-shani/`, ובתוכה `models/` — כפי שהתבקש.
-
-## פריסה אוטומטית (CI/CD)
-
-הקובץ [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) רץ בכל **push ל-main** שנוגע ב-`simulation/**`:
-
-1. אימות ל-AWS דרך **GitHub OIDC** (ללא מפתחות AWS שמורים בריפו).
-2. **סנכרון החכם של המודלים:** קבצי ה-`.glb` (LFS, ~183MB) נמשכים ומסונכרנים **רק אם הם השתנו** בדחיפה. עריכות HTML/JSON רגילות **לא** מושכות LFS — חוסך רוחב-פס.
-3. `aws s3 sync` של קבצי האתר → `s3://.../rotem-shani/`.
-4. `cloudfront create-invalidation` — מרענן את המטמון מיד.
-
-**כלומר:** אתה עורך, `git push` (או `.\sync.ps1`), וכעבור 1–2 דקות האתר החי מתעדכן לבד. אפשר גם להריץ ידנית מלשונית **Actions → Run workflow**.
-
-## עדכון ידני (אם צריך, בלי לחכות ל-CI)
+## SSH לשרת
 
 ```bash
-aws s3 sync simulation/ "s3://parking-sim-frontend-824980746386/rotem-shani/" --delete \
-  --exclude "*.backup*.json" --exclude "serve.py" --exclude "SUMMARY.md"
-aws cloudfront create-invalidation --distribution-id E2QO66F9BFH2JK --paths "/*"
+ssh -i "C:\Users\User\Aiprojects\env\parking-sim-rotem-key.pem" ubuntu@44.223.250.97
 ```
 
-## הערות
+## עדכון השרת מהריפו
 
-- **שמירה (💾):** באירוח סטטי אין שרת (`serve.py`), לכן כפתור השמירה נופל חזרה ל-`localStorage` של הדפדפן (נשמר בדפדפן, לא בקובץ המשותף). הפריסה מיועדת לצפייה/הדגמה; לעריכה-ושמירה-לקובץ הרץ מקומית עם `python serve.py` (ראה [SETUP.md](SETUP.md)).
-- **תלויות CDN:** Three.js נטען מ-jsdelivr/cdnjs (HTTPS) — עובד היטב מאחורי CloudFront.
-- **עלות:** CloudFront PriceClass_100 (US/EU), S3 ~200MB. עלות זניחה לתעבורה נמוכה.
-- **רוחב-פס LFS:** כל פריסה שכוללת שינוי מודלים מושכת ~183MB LFS ב-Actions. שינויי מודלים נדירים, אז זה בגבולות המכסה החינמית (1GB/חודש). שינויי קוד/פריסה רגילים לא נספרים.
+יש סקריפט `update.sh` על השרת (`/opt/rotem/update.sh`, לא מנוהל בגיט) — מגבה כל פריסה שנשמרה חי, מושך את הקוד העדכני מ-main, ומפעיל מחדש:
+
+```bash
+sudo /opt/rotem/update.sh
+```
+
+מה שהוא עושה: אם `simulation/rotem_saved.json` שונה בזמן ריצה (כפתור 💾) — מגבה אותו ל-`rotem_saved.server-<זמן>.json` ומשחזר לגרסת git כדי ש-`git pull --ff-only` יעבור נקי; מושך; ואם היה שינוי — `systemctl restart rotem`.
+
+> ⚠️ להריץ git ישירות בשרת **עם sudo** (הסקריפט עושה זאת), אחרת `.git/FETCH_HEAD` נשאר בבעלות root וריצה כ-ubuntu תיכשל בהרשאות.
+
+## תלויות שמותקנות בשרת (מעבר ל-`requirements.txt`)
+
+- **`python-multipart`** — נדרש להעלאת הווידאו (`/rec/upload`).
+- **`ffmpeg`** (חבילת מערכת: `sudo apt install ffmpeg`) — המרת WebM → MP4.
+- **Caddy** (מ-repo הרשמי של Caddy).
+
+## הגדרות סביבה — `server/.env` (בשרת בלבד, לא בגיט)
+
+הסודות מגיעים מתוך ה-`.env` הראשי (`C:\Users\User\Aiprojects\env\.env`) — הועתקו **רק** מפתחות ה-auth:
+
+| משתנה | תפקיד |
+|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` | ה-OAuth client הקיים (משותף עם bookkeeping) |
+| `AUTH_SESSION_SECRET` | חתימת עוגיית ה-session |
+| `AUTH_EMERGENCY_TOKEN` | כניסת חירום `/emergency-login?token=…` |
+| `AUTH_SUPER_ADMIN_EMAIL` | `boazen@gmail.com` |
+| `AUTH_REDIRECT_URI` | `https://parkin-sim-rotem.newavera.co.il/auth/callback` |
+| `AUTH_DB_PATH` | `/opt/rotem/database/auth.db` |
+| `AUTH_DISABLED` | `true` = כיבוי אימות לגמרי (כולם admin) — **לפיתוח בלבד**; ב-production `false` |
+
+## DNS ו-Google (חד-פעמי)
+
+- **DNS (Cloudflare):** רשומת `A` — `parkin-sim-rotem` → `44.223.250.97`, במצב **DNS-only (ענן אפור)**. אם Proxied (כתום) — Caddy לא יוכל להנפיק תעודת HTTPS.
+- **Google Cloud Console:** ב-OAuth client, תחת *Authorized redirect URIs*, יש `https://parkin-sim-rotem.newavera.co.il/auth/callback`.
+
+## הקמה מאפס (אם צריך לשחזר את השרת)
+
+1. Lightsail: instance Ubuntu 24.04 `micro_3_0` + IP סטטי + פורטים 22/80/443.
+2. `apt install python3-venv git git-lfs ffmpeg caddy`; `git lfs install`.
+3. `git clone …/rotem-shani.git /opt/rotem` → `git lfs pull`.
+4. venv ב-`/opt/rotem/server`; `pip install -r requirements.txt` + `pip install /opt/shared-auth`.
+5. `server/.env` עם הסודות (ראה למעלה).
+6. systemd unit `rotem` (uvicorn על 8100) + `Caddyfile` (reverse_proxy לדומיין).
+7. DNS + Google redirect כנ"ל.
+
+## האירוח הישן (S3/CloudFront) — הוצא משירות
+
+הפריסה הישנה הייתה אתר **סטטי ציבורי** ב-S3 מאחורי CloudFront (`dmfotw8kwayzt.cloudfront.net`), שהתעדכן ב-GitHub Actions בכל push. **workflow הפריסה הוסר** (commit "retire the S3/CloudFront deploy workflow"), ולכן push **לא** מפרס יותר ל-CloudFront. הפריסה כיום היא רק שרת ה-Lightsail דרך `update.sh`.
+
+> אם ה-bucket/distribution הישנים עדיין קיימים — אפשר להשאירם לצפייה ציבורית ללא אימות, או למחוק. שקול למחוק כדי שלא יישאר עותק לא-מאובטח שעוקף את הכניסה.

@@ -109,3 +109,19 @@
 - כשמכבים "חושך מוחלט": `hemi=0.16, amb=0.06, key=0.25`, ו-env חוזר לרכבים.
 - **גופי פלורוסנט** = קבוצת `fixtures`; כל אחד = פס `MeshBasic` זוהר + `PointLight`. `tFluor` מכבה/מדליק (הסתרת הקבוצה מדלגת גם על אורות-הילדים ברינדור).
 - **צבע רכב:** גוף = `MeshLambert` (חי, בלי ברק/env). זכוכית/כרום = חומרים מקוריים + `carEnv`. חשוב: `ACESFilmicToneMapping` **הלבין** צבעים (אדום→ורוד) — הוחלף ל-`NoToneMapping`.
+
+## הקלטת סרטון (בתוך ה-HTML)
+
+מודול קטן ב-`rotem-shani.html` (חפש `VIDEO RECORDING`):
+- `camShots[]` — נקודות צילום `{ dur, cam:{tx,ty,tz,radius,theta,phi} }` (snapshot של מצב ה-orbit).
+- `startTour(record)` בונה ציר-זמן (`buildTimeline`); בכל פריים `updateTour(t)` מאינטרפל את מצב המצלמה (smoothstep; `theta` בדרך הקצרה) ומעדכן דרך `setCam`/`applyCam`.
+- הקלטה: `renderer.domElement.captureStream(fps)` + `MediaRecorder` (WebM). ה-renderer נוצר עם `preserveDrawingBuffer:true` כדי שהלכידה לא תצא שחורה. בסיום — `finishRecording()` מעלה ל-`POST /rec/upload` (המרה ל-MP4 בשרת), ובהעדר שרת נופל להורדת WebM.
+
+## שכבת השרת והאימות (`server/`)
+
+מעל ה-HTML הסטטי רץ שרת **FastAPI** ([server/app.py](../server/app.py)) שמארח את הכל מאחורי כניסת Google:
+- `install_auth(...)` מ-[`shared-auth`](https://github.com/boazeng/shared-auth) — מוסיף `/login`, `/auth/callback`, `/auth/users` (CRUD), middleware שמגן על כל נתיב לא-ציבורי, ותפקידים `admin`/`approver`/`user`.
+- מגיש את הסימולציה (`/sim`) ולוח הבקרה (`/dashboard`, וגם `/sim/admin`) כ-`StaticFiles` **מאחורי אימות**.
+- `/save` + `/reset` (admin) כותבים את `rotem_saved.json` **לדיסק** — אותו API של `serve.py`, כך שכפתור 💾 עובד ללא שינוי אבל שומר לשרת.
+- `/manage` (מסך ניהול + ניהול משתמשים), `/admin-only`, ו-`/rec*` (העלאה/המרה/רשימה/מחיקה של סרטונים).
+- **הרצה מקומית:** אפשר עדיין להריץ את ה-HTML לבד או דרך `serve.py`; שכבת השרת רלוונטית לפריסה המאובטחת. פרטים ב-[DEPLOYMENT.md](DEPLOYMENT.md).
