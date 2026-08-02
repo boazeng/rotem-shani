@@ -122,6 +122,67 @@
     #recPanel .optrow input[type=number] { width: 44px; background: #0f1626; color: #eaf3ff;
       border: 1px solid #35538a; border-radius: 5px; padding: 3px 4px; text-align: center; user-select: text; }
     #recPanel select { background: #0f1626; color: #eaf3ff; border: 1px solid #35538a; border-radius: 5px; padding: 3px 5px; font-size: 12px; }
+    /* ---- 🎯 scenarios panel (multi-stage arrival/departure plan) ---- */
+    #scenPanel {
+      position: fixed; left: 12px; top: 64px; z-index: 11;
+      background: rgba(14,20,36,0.92); color: #dbe6ff; border: 1px solid #24406e;
+      border-radius: 10px; padding: 12px 14px; font-size: 13px; backdrop-filter: blur(6px);
+      width: 300px; max-height: 82vh; display: flex; flex-direction: column;
+      user-select: none; -webkit-user-select: none;
+    }
+    #scenPanel h2 { font-size: 14px; margin-bottom: 6px; color: #c9a7ff; cursor: move; }
+    #scenPanel button {
+      background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
+      padding: 6px 10px; font-size: 13px; cursor: pointer; flex: 1;
+    }
+    #scenPanel button:hover { background: #274068; }
+    #scenPanel button.go { background: #1f5a3a; border-color: #2f8a5a; color: #d4ffe4; }
+    #scenPanel button.go:hover { background: #276e48; }
+    #scenPanel button.fast { background: #3d2f5e; border-color: #6b52a8; color: #e6dbff; }
+    #scenPanel button.fast:hover { background: #4c3a75; }
+    #scenPanel button.stop { background: #4a1f24; border-color: #8a353f; color: #ffd0d0; }
+    #scenPanel .srow { display: flex; gap: 6px; margin: 6px 0; }
+    #scenPanel .shint { color: #8ea6cf; font-size: 11px; margin: 4px 0; line-height: 1.4; }
+    #scenPanel .shint b { color: #c9a7ff; font-weight: 600; }
+    #scenPanel .stages { overflow-y: auto; margin: 4px 0; display: flex; flex-direction: column; gap: 5px; min-height: 22px; }
+    /* stage row + header share one grid so the columns line up */
+    #scenPanel .sgrid { display: grid; grid-template-columns: 18px 1fr 1fr 1fr 24px; gap: 5px; align-items: center; }
+    #scenPanel .shead { color: #8ea6cf; font-size: 10.5px; text-align: center; padding: 0 7px; }
+    #scenPanel .stage { background: #0f1626; border: 1px solid #24406e; border-radius: 7px; padding: 5px 7px; }
+    #scenPanel .stage .idx { color: #c9a7ff; font-weight: 700; font-size: 12px; }
+    #scenPanel .stage input { width: 100%; background: #0b1220; color: #eaf3ff; border: 1px solid #35538a;
+      border-radius: 5px; padding: 3px 2px; text-align: center; font-size: 12px; user-select: text; }
+    #scenPanel .stage .del { flex: 0 0 auto; background: #3a1a1e; border: 1px solid #7a2f37; border-radius: 5px;
+      color: #ffbcbc; cursor: pointer; padding: 2px 5px; font-size: 12px; }
+    #scenPanel .optrow { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 4px 0; }
+    #scenPanel .optrow input { background: #0f1626; color: #eaf3ff; border: 1px solid #35538a;
+      border-radius: 5px; padding: 3px 5px; text-align: center; user-select: text; }
+    #scenPanel .optrow input[type=number] { width: 52px; }
+    #scenPanel .optrow input[type=text] { width: 78px; text-align: right; }
+    #scenPanel .divider { height: 1px; background: #24406e; margin: 8px 0; }
+    /* ---- 📋 report overlay ---- */
+    #scenReport { position: fixed; inset: 0; z-index: 30; background: rgba(6,9,17,0.72); display: flex;
+      align-items: center; justify-content: center; padding: 24px; }
+    #scenReport .rpbox { background: #0e1424; border: 1px solid #35538a; border-radius: 12px;
+      width: min(980px, 96vw); max-height: 90vh; display: flex; flex-direction: column; color: #dbe6ff; }
+    #scenReport .rphead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #24406e; }
+    #scenReport .rphead h2 { font-size: 16px; color: #c9a7ff; flex: 1; }
+    #scenReport .rpsum { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #24406e; }
+    #scenReport .kpi { background: #131c30; border: 1px solid #24406e; border-radius: 8px; padding: 7px 11px; min-width: 104px; }
+    #scenReport .kpi .lbl { color: #8ea6cf; font-size: 10.5px; }
+    #scenReport .kpi .val { font-size: 16px; font-weight: 700; color: #7fd0ff; font-variant-numeric: tabular-nums; }
+    #scenReport .rptable { overflow: auto; padding: 0 16px 8px; }
+    #scenReport table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+    #scenReport th { position: sticky; top: 0; background: #16203a; color: #8ea6cf; font-weight: 600;
+      padding: 7px 8px; text-align: center; border-bottom: 1px solid #35538a; white-space: nowrap; }
+    #scenReport td { padding: 5px 8px; text-align: center; border-bottom: 1px solid #1b2942; white-space: nowrap; }
+    #scenReport tr.in td.op { color: #7fe0a8; } #scenReport tr.out td.op { color: #ffc07f; }
+    #scenReport tr.bad td { color: #ff9d9d; }
+    #scenReport .rpfoot { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #24406e; }
+    #scenReport button { background: #1c2c4a; color: #cfe2ff; border: 1px solid #35538a; border-radius: 7px;
+      padding: 6px 14px; font-size: 13px; cursor: pointer; }
+    #scenReport button:hover { background: #274068; }
+    #scenReport .rpnote { color: #8ea6cf; font-size: 11.5px; padding: 0 16px 10px; line-height: 1.5; }
     /* ---- top toolbar: show/hide the panels ---- */
     .hidden { display: none !important; }
     /* panels must not text-select when the mouse drags over them (camera rotation) */
@@ -185,6 +246,7 @@
     <button id="btnHud" class="tab active" title="פאנל המתקן — רותם שני">🏢 רותם שני</button>
     <button id="btnBuild" class="tab" title="תפריט בניה ועריכה">🔨 בניה</button>
     <button id="btnSim" class="tab active" title="תפריט סימולציה">⚙ סימולציה</button>
+    <button id="btnScen" class="tab" title="תרחישים — בניית שלבי הכנסה/הוצאה והפקת דוח זמנים">🎯 תרחישים</button>
     <button id="btnRec" class="tab" title="הקלטת סרטון — נקודות צילום ומעבר חלק">🎬 סרטון</button>
     <span class="tsep"></span>
     <button id="top" title="מבט על">⬇ מבט על</button>
@@ -278,6 +340,47 @@
     <div class="rhint" id="recSaved"></div>
     <div class="rrow"><button id="recLibrary" title="עמוד הסרטונים השמורים בשרת">📁 סרטונים שמורים</button></div>
     <div class="rhint">סובב/גרור את המצלמה למקום הרצוי → "הוסף נקודת צילום". קבע משך מעבר לכל נקודה. "הקלט" מפיק MP4 שנשמר בשרת.</div>
+  </div>
+
+  <div id="scenPanel" class="hidden">
+    <h2>🎯 תרחישים</h2>
+    <div class="shint">כל <b>שלב</b> = פרק זמן + כמה רכבים נכנסים וכמה יוצאים בו. הזמנים בתוך השלב מוגרלים ב<b>פילוג גאוסי</b> (שיא באמצע השלב).</div>
+    <div class="sgrid shead"><span></span><span>דקות</span><span>כניסות</span><span>יציאות</span><span></span></div>
+    <div id="scenStages" class="stages"></div>
+    <div class="srow"><button id="scenAdd" title="הוסף שלב לתרחיש">➕ הוסף שלב</button></div>
+    <div class="divider"></div>
+    <label class="optrow">פיזור <span style="font-family:serif">σ</span>
+      <input type="number" id="scenSigma" value="17" min="2" max="60" step="1" title="סטיית התקן כאחוז מפרק הזמן של השלב. קטן = אירועים צפופים באמצע, גדול = מפוזרים">
+      <span class="shint" style="margin:0">% מפרק הזמן</span></label>
+    <label class="optrow">זרע אקראי
+      <input type="text" id="scenSeed" placeholder="ריק = אקראי" title="אותו זרע = אותה הגרלה בדיוק — להשוואת תרחישים">
+      <span class="shint" style="margin:0">(חזרתיות)</span></label>
+    <label class="optrow">תפוסה בהתחלה
+      <input type="number" id="scenOcc" min="0" step="1" value="10" title="כמה רכבים חונים במתקן כשהתרחיש מתחיל. חניון מלא = אין לאן לקלוט">
+      <span class="shint" style="margin:0" id="scenOccMax">מתוך 20</span></label>
+    <div class="shint" id="scenPlan">—</div>
+    <div class="srow">
+      <button id="scenRun" class="go" title="הרץ את התרחיש בסצנה — ניתן להאיץ בבורר 'הגברת מהירות'">▶ הרץ בסצנה</button>
+      <button id="scenFastBtn" class="fast" title="הרץ את התרחיש ללא אנימציה והפק דוח מיידית">⚡ חשב דוח</button>
+    </div>
+    <div class="srow">
+      <button id="scenStopBtn" class="stop" title="עצור את התרחיש הרץ">⏹ עצור</button>
+      <button id="scenReportBtn" title="הצג את דוח התרחיש האחרון">📋 דוח</button>
+    </div>
+    <div class="shint" id="scenLive">—</div>
+  </div>
+
+  <div id="scenReport" class="hidden">
+    <div class="rpbox">
+      <div class="rphead"><h2>📋 דוח תרחיש</h2><button id="rpClose">✕</button></div>
+      <div class="rpsum" id="rpSummary"></div>
+      <div class="rpnote" id="rpNote"></div>
+      <div class="rptable"><table id="rpTable"></table></div>
+      <div class="rpfoot">
+        <button id="rpCsv">⬇ ייצוא CSV</button>
+        <button id="rpClose2">סגור</button>
+      </div>
+    </div>
   </div>
 
   <canvas id="compass" width="84" height="84"></canvas>
@@ -1215,7 +1318,9 @@
       el2.textContent = `${label} · E ${east} · N ${north} · ${deg.toFixed(0)}°`;
     }
     // ---- save / load / reset layout ----
+    let scenQuiet = false;                 // 🎯 a running scenario reports through its own live line, not per-operation flashes
     function flash(msg) {
+      if (scenQuiet) return;
       const el2 = document.getElementById('selinfo');
       el2.textContent = msg;
       clearTimeout(flash._t);
@@ -1455,6 +1560,9 @@
     }
     captureInitial();
     function resetSim() {
+      // ↺ during a scenario abandons it (and produces the partial report). SR is null while a scenario is
+      // STARTING — scenStart calls resetSim before creating SR — so this never recurses.
+      if (SR) scenFinish('אותחל באמצע התרחיש');   // ...then fall through and actually reset
       anims = []; taskQueue = []; pending = []; convoyDir = null; sinceLaunch = 0; running = false;
       if (paused) setPaused(false);
       initialState.forEach(s => {
@@ -1529,6 +1637,7 @@
       return false;
     }
     function stepScenario(dt) {
+      if (SR) SR.clock += dt;                    // 🎯 scenario clock — advances in SIMULATION seconds (dt is already ×CFG.speed)
       for (let i = anims.length - 1; i >= 0; i--) { const a = anims[i]; if (advanceOne(a, dt)) { anims.splice(i, 1); if (a.onDone) a.onDone(); } }
       for (let i = pending.length - 1; i >= 0; i--) { pending[i].t -= dt; if (pending[i].t <= 0) { const fn = pending[i].fn; pending.splice(i, 1); fn(); } }
       sinceLaunch += dt;
@@ -1540,8 +1649,16 @@
         }
         break;   // different direction (or a lone task) -> wait for the running ones to finish
       }
-      if (running && anims.length === 0 && taskQueue.length === 0 && pending.length === 0) { running = false; flash('הדמיה הסתיימה ✓'); }
+      // one operation (extract / intake) just finished: the engine's own end-of-run point.
+      // 🎯 a running scenario claims it via onIdleHook to stamp the operation's end time.
+      if (running && anims.length === 0 && taskQueue.length === 0 && pending.length === 0) {
+        running = false;
+        const h = onIdleHook; onIdleHook = null;
+        if (h) h(); else flash('הדמיה הסתיימה ✓');
+      }
+      if (SR) scenDispatch();                    // 🎯 release due events / start the next queued one
     }
+    let onIdleHook = null;                       // called once when the current operation completes (scenario layer)
 
     // ---- simple single-car demo (aisle / spin-return) ----
     function playCar(num) {
@@ -1740,6 +1857,38 @@
     // A* : slide tiles so that car T reaches the gateway cell (blank starts at gateway)
     // generic sliding-puzzle A* : slide tiles so car T reaches `goal`. Supports 1+ blank cells.
     // extraGoal(board) — optional extra condition that must also hold at the goal (e.g. a cell must be empty).
+    // Binary min-heap for the A* open lists, ordered by (f, insertion order). That is EXACTLY what the previous
+    // linear "first minimum" scan picked — the open array was always in insertion order, since splice preserves
+    // relative order — so the solvers expand the same nodes and return the same plans, at O(log n) per pop
+    // instead of O(n). The open list reaches ~10^5 nodes when the grid has many empty trays (a low-occupancy
+    // front-pack), where the scan alone cost tens of seconds per extraction.
+    function makeHeap() {
+      const a = []; let seq = 0;
+      const less = (x, y) => x.f !== y.f ? x.f < y.f : x.s < y.s;
+      const swap = (i, j) => { const t = a[i]; a[i] = a[j]; a[j] = t; };
+      return {
+        get size() { return a.length; },
+        push(n) {
+          n.s = seq++; a.push(n);
+          let i = a.length - 1;
+          while (i > 0) { const p = (i - 1) >> 1; if (!less(a[i], a[p])) break; swap(i, p); i = p; }
+        },
+        pop() {
+          const top = a[0], last = a.pop();
+          if (a.length) {
+            a[0] = last;
+            for (let i = 0;;) {
+              const l = 2 * i + 1, r = l + 1; let m = i;
+              if (l < a.length && less(a[l], a[m])) m = l;
+              if (r < a.length && less(a[r], a[m])) m = r;
+              if (m === i) break;
+              swap(i, m); i = m;
+            }
+          }
+          return top;
+        }
+      };
+    }
     function solvePuzzle(startBoard, cells, neighbors, goal, T, extraGoal, stateValid) {
       const [gc, gr] = goal.split(',').map(Number);
       const enc = b => cells.map(k => b[k]).join('.');
@@ -1747,12 +1896,11 @@
       const h = b => { const [c, r] = cellOfT(b).split(',').map(Number); return Math.abs(c - gc) + Math.abs(r - gr); };
       const start = {}; cells.forEach(k => start[k] = startBoard[k]);
       const sKey = enc(start);
-      const open = [{ b: start, g: 0, f: h(start), key: sKey }];
+      const open = makeHeap(); open.push({ b: start, g: 0, f: h(start), key: sKey });
       const came = new Map(), gscore = new Map([[sKey, 0]]), closed = new Set();
       let nodes = 0;
-      while (open.length) {
-        let bi = 0; for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-        const cur = open.splice(bi, 1)[0];
+      while (open.size) {
+        const cur = open.pop();
         if (closed.has(cur.key)) continue;
         closed.add(cur.key);
         if (cur.b[goal] === T && (!extraGoal || extraGoal(cur.b))) {
@@ -1793,12 +1941,11 @@
           s += Math.abs(c - tc) + Math.abs(r - tr); } return s; };
       const tkey = enc(targetBoard);
       const start = {}; cells.forEach(k => start[k] = startBoard[k] || 0);
-      const open = [{ b: start, g: 0, f: h(start), key: enc(start) }];
+      const open = makeHeap(); open.push({ b: start, g: 0, f: h(start), key: enc(start) });
       const came = new Map(), gscore = new Map([[enc(start), 0]]), closed = new Set();
       let nodes = 0;
-      while (open.length) {
-        let bi = 0; for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-        const cur = open.splice(bi, 1)[0];
+      while (open.size) {
+        const cur = open.pop();
         if (closed.has(cur.key)) continue; closed.add(cur.key);
         if (cur.key === tkey) { const moves = []; let k = cur.key;
           while (came.has(k)) { const c = came.get(k); moves.unshift(c.move); k = c.pkey; } return moves; }
@@ -2402,13 +2549,290 @@
     makeDraggable(document.getElementById('recPanel'));
     renderShots();
 
+    // ============ 🎯 SCENARIOS — multi-stage arrival/departure plan + timing report ============
+    // A scenario is a list of STAGES. Each stage = a time span with X cars to admit and Y cars to extract.
+    // Event times inside a stage are drawn from a GAUSSIAN centred on the middle of the stage (σ = % of the span),
+    // so traffic peaks mid-stage like a real rush. The facility runs ONE operation at a time (single lift +
+    // single turntable), so events that arrive while it is busy WAIT IN A QUEUE — the report shows the request
+    // time, the actual start, the wait and the duration, which is exactly what tells you if a stage is over-loaded.
+    // All times are SIMULATION seconds (= real facility seconds); the ⚙ speed multiplier only changes viewing speed.
+    const SCEN = { stages: [{ min: 10, in: 3, out: 2 }], sigmaPct: 17, seed: '', occ: 10 };
+    const SCEN_KEY = 'rotem_scenario_v1';
+    let SR = null;          // live run state (null = no scenario running)
+    let scenFast = false;   // headless mode: stepScenario is driven by a chunked loop instead of the render frame
+    let lastReport = null;
+
+    // ---- seeded RNG (same seed -> same scenario, for comparing runs) ----
+    const mulberry32 = a => () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const hashSeed = s => { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+    // Box–Muller, truncated to [0,T] by re-drawing (keeps events inside their own stage)
+    const gauss = (rnd, mu, sg) => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd();
+      return mu + sg * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    function gaussIn(rnd, T, sg) { for (let i = 0; i < 60; i++) { const t = gauss(rnd, T / 2, sg); if (t >= 0 && t <= T) return t; } return T / 2; }
+
+    const fmtT = s => {                                   // seconds -> h:mm:ss / mm:ss
+      s = Math.max(0, Math.round(s));
+      const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), q = s % 60;
+      return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(q).padStart(2, '0');
+    };
+
+    function buildEvents() {
+      const seed = (SCEN.seed || '').trim();
+      const rnd = seed ? mulberry32(hashSeed(seed)) : Math.random;
+      const events = []; let t0 = 0;
+      SCEN.stages.forEach((s, si) => {
+        const T = Math.max(1, (+s.min || 0)) * 60;                       // stage span in simulation seconds
+        const sg = Math.max(1, T * (SCEN.sigmaPct / 100));
+        for (let i = 0; i < Math.max(0, +s.in || 0); i++)  events.push({ stage: si + 1, type: 'in',  req: t0 + gaussIn(rnd, T, sg) });
+        for (let i = 0; i < Math.max(0, +s.out || 0); i++) events.push({ stage: si + 1, type: 'out', req: t0 + gaussIn(rnd, T, sg) });
+        t0 += T;
+      });
+      events.sort((a, b) => a.req - b.req);
+      events.forEach((e, i) => e.n = i + 1);
+      return { events, planned: t0, rnd };
+    }
+
+    // which car to move: extraction picks a random OCCUPIED spot in block 1/2 (car 21 is the aisle helper and
+    // car 1 is the P1 pass-through — neither is a regular parking spot); intake fills the front-most empty spot.
+    function pickOccupied(rnd) {
+      const c = [];
+      trayGroups.forEach(tg => { const n = tg.userData.num; if ((BLOCK1.has(n) || BLOCK2.has(n)) && !isEmptySpot(tg)) c.push(n); });
+      return c.length ? c[Math.floor(rnd() * c.length)] : NaN;
+    }
+    const occupiedCount = () => trayGroups.filter(tg => (BLOCK1.has(tg.userData.num) || BLOCK2.has(tg.userData.num)) && !isEmptySpot(tg)).length;
+    const blockSpots = () => trayGroups.filter(tg => BLOCK1.has(tg.userData.num) || BLOCK2.has(tg.userData.num)).length;
+    // A scenario needs a starting occupancy: resetSim() restores a FULL facility, and a full facility can't
+    // admit anyone. Empty out the front-most spots (nearest the turntable) — the same arrangement front-packing
+    // produces, so the empties are exactly where an intake would look for them.
+    function setOccupancy(target) {
+      if (!turntableGroup) return;
+      const tx = turntableGroup.position.x, tz = turntableGroup.position.z;
+      const spots = trayGroups.filter(tg => BLOCK1.has(tg.userData.num) || BLOCK2.has(tg.userData.num))
+        .sort((a, b) => Math.hypot(a.position.x - tx, a.position.z - tz) - Math.hypot(b.position.x - tx, b.position.z - tz));
+      const nEmpty = Math.max(0, spots.length - Math.max(0, Math.min(spots.length, target)));
+      const showCars = document.getElementById('tCars').checked;
+      spots.forEach((tg, i) => { const e = i < nEmpty; tg.userData.empty = e;
+        const c = trayCar(tg); if (c) c.visible = !e && showCars; });
+    }
+
+    function scenStart(fast) {
+      if (SR) { flash('תרחיש כבר רץ'); return false; }
+      readScenUI();
+      if (!SCEN.stages.length) { flash('אין שלבים בתרחיש'); return false; }
+      const plan = buildEvents();
+      if (!plan.events.length) { flash('אין אירועים — הגדר הכנסות/הוצאות'); return false; }
+      if (busy()) { flash('הדמיה רצה — אתחל תחילה ↺'); return false; }
+      resetSim();                                   // every run starts from the saved baseline (reproducible)
+      setOccupancy(SCEN.occ);                       // ...at the chosen starting occupancy
+      SR = { events: plan.events, i: 0, clock: 0, queue: [], active: null, log: [], rnd: plan.rnd,
+             planned: plan.planned, fast: !!fast, startOcc: occupiedCount(),
+             stages: SCEN.stages.map(s => ({ min: s.min, in: s.in, out: s.out })),   // snapshot: the report describes THIS run
+             sigmaPct: SCEN.sigmaPct, seed: SCEN.seed,
+             cap: plan.planned + 4 * 3600 };        // safety stop if the queue can never drain
+      scenQuiet = true;
+      document.getElementById('scenReport').classList.add('hidden');
+      scenLive();
+      return true;
+    }
+
+    // called at the end of every stepScenario: release due events and start the next one when the facility frees up
+    function scenDispatch() {
+      scenLive();
+      while (SR.i < SR.events.length && SR.events[SR.i].req <= SR.clock) SR.queue.push(SR.events[SR.i++]);
+      while (!SR.active && SR.queue.length && !busy()) scenBeginEvent();     // loops so events that can't run are skipped instantly
+      if (SR.clock > SR.cap) { scenFinish('נעצר — חריגת זמן (התור לא מתרוקן)'); return; }
+      if (!SR.active && !SR.queue.length && SR.i >= SR.events.length && !busy()) scenFinish(null);
+    }
+
+    function scenBeginEvent() {
+      const e = SR.queue.shift();
+      e.start = SR.clock; e.wait = e.start - e.req;
+      const num = e.type === 'out' ? pickOccupied(SR.rnd) : frontMostEmpty();
+      if (isNaN(num)) {                                                     // nothing to move -> record and move on
+        e.car = '—'; e.end = e.start; e.dur = 0;
+        e.status = e.type === 'out' ? 'אין רכב במתקן' : 'החניון מלא';
+        SR.log.push(e); scenLive(); return;
+      }
+      e.car = num; SR.active = e;
+      onIdleHook = () => {                                                  // the engine calls this when the operation ends
+        e.end = SR.clock; e.dur = e.end - e.start; e.status = 'בוצע';
+        SR.log.push(e); SR.active = null; scenLive();
+      };
+      if (e.type === 'out') runScenario(num); else runIntake(num);
+      if (!running) {                                                       // refused to start (no route / unsupported)
+        onIdleHook = null; SR.active = null;
+        e.end = e.start; e.dur = 0; e.status = 'נכשל — לא נמצא נתיב';
+        SR.log.push(e); scenLive();
+      }
+    }
+
+    function scenFinish(abortNote) {
+      const s = SR; SR = null; scenQuiet = false; scenFast = false; onIdleHook = null;
+      if (s.active) { anims = []; taskQueue = []; pending = []; running = false; settleClean();   // stopped mid-operation
+        s.active.end = s.clock; s.active.dur = s.active.end - s.active.start; s.active.status = 'הופסק'; s.log.push(s.active); }
+      s.queue.concat(s.events.slice(s.i)).forEach(e => {                    // never got their turn
+        e.start = null; e.wait = null; e.dur = 0; e.car = '—'; e.status = 'לא בוצע'; s.log.push(e); });
+      s.log.sort((a, b) => a.req - b.req);
+      s.note = abortNote; s.endOcc = occupiedCount();
+      lastReport = s;
+      renderReport(s);
+      document.getElementById('scenLive').textContent = abortNote || 'התרחיש הסתיים ✓';
+      flash(abortNote || 'התרחיש הסתיים ✓');
+    }
+
+    function scenStop() { if (SR) scenFinish('התרחיש נעצר ידנית'); else flash('אין תרחיש רץ'); }
+
+    // headless: drive stepScenario in chunks so a full hour of facility time computes in seconds without blocking the UI
+    function scenRunFast() {
+      if (!scenStart(true)) return;
+      scenFast = true;
+      const DT = 1 / 30;
+      const chunk = () => {
+        if (!SR) { scenFast = false; return; }
+        const t0 = performance.now();
+        while (SR && performance.now() - t0 < 40) stepScenario(DT);
+        if (SR) { scenLive(); setTimeout(chunk, 0); } else scenFast = false;
+      };
+      chunk();
+    }
+
+    function scenLive() {
+      if (!SR) return;
+      const sec = Math.floor(SR.clock);                       // called every frame -> only touch the DOM once per second
+      if (sec === SR._shown && SR._n === SR.log.length && SR._q === SR.queue.length) return;
+      SR._shown = sec; SR._n = SR.log.length; SR._q = SR.queue.length;
+      const el = document.getElementById('scenLive');
+      const done = SR.log.length, tot = SR.events.length;
+      const act = SR.active ? `· מבצע ${SR.active.type === 'in' ? 'כניסה' : 'יציאה'} רכב ${SR.active.car}` : (SR.queue.length ? '· ממתין' : '');
+      el.textContent = `⏱ ${fmtT(SR.clock)} · ${done}/${tot} אירועים · בתור ${SR.queue.length} ${act}`;
+    }
+
+    // ---- report ----
+    function renderReport(s) {
+      const done = s.log.filter(e => e.status === 'בוצע');
+      const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+      const dIn = done.filter(e => e.type === 'in').map(e => e.dur), dOut = done.filter(e => e.type === 'out').map(e => e.dur);
+      const waits = done.map(e => e.wait);
+      const kpi = (lbl, val) => `<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
+      document.getElementById('rpSummary').innerHTML =
+        kpi('אירועים', `${done.length}/${s.log.length}`) +
+        kpi('זמן תרחיש בפועל', fmtT(s.clock)) +
+        kpi('זמן מתוכנן', fmtT(s.planned)) +
+        kpi('משך כניסה ממוצע', fmtT(avg(dIn))) +
+        kpi('משך יציאה ממוצע', fmtT(avg(dOut))) +
+        kpi('המתנה ממוצעת', fmtT(avg(waits))) +
+        kpi('המתנה מקסימלית', fmtT(waits.length ? Math.max(...waits) : 0)) +
+        kpi('תפוקה', (s.clock ? (done.length / s.clock * 3600) : 0).toFixed(1) + ' /שעה') +
+        kpi('תפוסה בסיום', `${s.endOcc}/${blockSpots()}`);
+      const stages = s.stages.map((st, i) => `שלב ${i + 1}: ${st.min} דק׳ · ${st.in} כניסות · ${st.out} יציאות`).join(' | ');
+      document.getElementById('rpNote').innerHTML =
+        `${stages} · פיזור σ=${s.sigmaPct}% ${s.seed ? '· זרע "' + s.seed + '"' : ''} · תפוסה בהתחלה ${s.startOcc}/${blockSpots()}` +
+        (s.note ? ` · <b style="color:#ff9d9d">${s.note}</b>` : '');
+      const head = ['#', 'שלב', 'פעולה', 'רכב', 'זמן בקשה', 'זמן התחלה', 'המתנה', 'משך', 'זמן סיום', 'סטטוס'];
+      const rows = s.log.map(e => {
+        const cls = e.status === 'בוצע' ? e.type : 'bad';
+        return `<tr class="${cls}"><td>${e.n}</td><td>${e.stage}</td><td class="op">${e.type === 'in' ? 'כניסה' : 'יציאה'}</td>` +
+          `<td>${e.car}</td><td>${fmtT(e.req)}</td><td>${e.start == null ? '—' : fmtT(e.start)}</td>` +
+          `<td>${e.wait == null ? '—' : fmtT(e.wait)}</td><td>${e.dur ? fmtT(e.dur) : '—'}</td>` +
+          `<td>${e.end == null ? '—' : fmtT(e.end)}</td><td>${e.status}</td></tr>`;
+      }).join('');
+      document.getElementById('rpTable').innerHTML =
+        `<thead><tr>${head.map(h => '<th>' + h + '</th>').join('')}</tr></thead><tbody>${rows}</tbody>`;
+      document.getElementById('scenReport').classList.remove('hidden');
+    }
+
+    function reportCSV() {
+      if (!lastReport) return;
+      const head = ['מס', 'שלב', 'פעולה', 'רכב', 'זמן בקשה', 'זמן התחלה', 'המתנה (ש)', 'משך (ש)', 'זמן סיום', 'סטטוס'];
+      const lines = [head.join(',')].concat(lastReport.log.map(e => [e.n, e.stage, e.type === 'in' ? 'כניסה' : 'יציאה', e.car,
+        fmtT(e.req), e.start == null ? '' : fmtT(e.start), e.wait == null ? '' : Math.round(e.wait),
+        Math.round(e.dur), e.end == null ? '' : fmtT(e.end), e.status].join(',')));
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'rotem-scenario-report.csv'; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+
+    // ---- panel UI ----
+    function readScenUI() {
+      SCEN.sigmaPct = Math.min(60, Math.max(2, parseFloat(document.getElementById('scenSigma').value) || 17));
+      SCEN.seed = document.getElementById('scenSeed').value || '';
+      const occEl = document.getElementById('scenOcc');
+      SCEN.occ = Math.max(0, Math.min(blockSpots(), parseInt(occEl.value, 10) || 0));
+      if (+occEl.value !== SCEN.occ) occEl.value = SCEN.occ;
+      try { localStorage.setItem(SCEN_KEY, JSON.stringify(SCEN)); } catch (err) {}
+    }
+    function renderStages() {
+      const box = document.getElementById('scenStages');
+      box.innerHTML = '';
+      SCEN.stages.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'stage sgrid';
+        row.innerHTML = `<span class="idx">${i + 1}</span>` +
+          `<input type="number" min="1" step="1" value="${s.min}" data-f="min" title="פרק הזמן של השלב בדקות">` +
+          `<input type="number" min="0" step="1" value="${s.in}" data-f="in" title="כמה רכבים נכנסים בשלב">` +
+          `<input type="number" min="0" step="1" value="${s.out}" data-f="out" title="כמה רכבים יוצאים בשלב">` +
+          `<button class="del" title="מחק שלב">🗑</button>`;
+        row.querySelectorAll('input').forEach(inp => inp.oninput = () => {
+          s[inp.dataset.f] = Math.max(inp.dataset.f === 'min' ? 1 : 0, parseInt(inp.value, 10) || 0);
+          scenPlanLine(); try { localStorage.setItem(SCEN_KEY, JSON.stringify(SCEN)); } catch (err) {}
+        });
+        row.querySelector('.del').onclick = () => { SCEN.stages.splice(i, 1); renderStages(); };
+        box.appendChild(row);
+      });
+      scenPlanLine();
+      try { localStorage.setItem(SCEN_KEY, JSON.stringify(SCEN)); } catch (err) {}
+    }
+    function scenPlanLine() {
+      const mins = SCEN.stages.reduce((a, s) => a + (+s.min || 0), 0);
+      const nin = SCEN.stages.reduce((a, s) => a + (+s.in || 0), 0);
+      const nout = SCEN.stages.reduce((a, s) => a + (+s.out || 0), 0);
+      document.getElementById('scenPlan').innerHTML =
+        `סה״כ: <b>${SCEN.stages.length}</b> שלבים · <b>${mins}</b> דק׳ · <b>${nin}</b> כניסות · <b>${nout}</b> יציאות` +
+        (mins ? ` · צפיפות ${((nin + nout) / mins * 60).toFixed(1)} פעולות/שעה` : '');
+    }
+    document.getElementById('scenOcc').max = blockSpots();
+    document.getElementById('scenOccMax').textContent = 'מתוך ' + blockSpots();
+    document.getElementById('scenOcc').value = SCEN.occ = Math.round(blockSpots() / 2);
+    try {                                                        // restore the last edited scenario
+      const sv = JSON.parse(localStorage.getItem(SCEN_KEY));
+      if (sv && Array.isArray(sv.stages) && sv.stages.length) {
+        SCEN.stages = sv.stages; SCEN.sigmaPct = sv.sigmaPct || 17; SCEN.seed = sv.seed || '';
+        if (sv.occ != null) SCEN.occ = Math.max(0, Math.min(blockSpots(), sv.occ));
+        document.getElementById('scenSigma').value = SCEN.sigmaPct;
+        document.getElementById('scenSeed').value = SCEN.seed;
+        document.getElementById('scenOcc').value = SCEN.occ;
+      }
+    } catch (err) {}
+    document.getElementById('scenAdd').onclick = () => {
+      const last = SCEN.stages[SCEN.stages.length - 1] || { min: 10, in: 3, out: 2 };
+      SCEN.stages.push({ min: last.min, in: last.in, out: last.out }); renderStages();
+    };
+    document.getElementById('scenSigma').oninput = readScenUI;
+    document.getElementById('scenSeed').oninput = readScenUI;
+    document.getElementById('scenOcc').oninput = readScenUI;
+    document.getElementById('scenRun').onclick = () => scenStart(false);
+    document.getElementById('scenFastBtn').onclick = scenRunFast;
+    document.getElementById('scenStopBtn').onclick = scenStop;
+    document.getElementById('scenReportBtn').onclick = () => {
+      if (lastReport) renderReport(lastReport); else flash('אין דוח — הרץ תרחיש תחילה');
+    };
+    document.getElementById('rpCsv').onclick = reportCSV;
+    document.getElementById('rpClose').onclick = document.getElementById('rpClose2').onclick =
+      () => document.getElementById('scenReport').classList.add('hidden');
+    togglePanel('btnScen', 'scenPanel');
+    makeDraggable(document.getElementById('scenPanel'));
+    renderStages();
+
     let lastT = 0;
     function animate(t) {
       requestAnimationFrame(animate);
       if (t === undefined) t = lastT;
       const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
       lastT = t;
-      if (!paused) stepScenario(dt * CFG.speed);   // global speed multiplier — scales all motion uniformly
+      // scenFast: the 🎯 headless scenario loop drives stepScenario itself — don't advance it twice
+      if (!paused && !scenFast) stepScenario(dt * CFG.speed);   // global speed multiplier — scales all motion uniformly
       if (tour) updateTour(t);                      // 🎬 drive the camera along the recording tour
       if (boxHelper) boxHelper.update();
       drawCompass();
