@@ -13,11 +13,24 @@ import json
 import sys
 
 DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(DIR)                       # repo root (parent of simulation/)
+ADMIN_DIR = os.path.join(ROOT, "admin")          # the management dashboard (sibling folder)
 SAVE = os.path.join(DIR, "rotem_saved.json")
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8010
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        # the "מרכז ניהול" button opens ../admin/index.html -> /admin/... . The server root is simulation/,
+        # so map /admin/* to the sibling admin/ folder (otherwise ".." can't escape the root -> 404).
+        p = path.split("?", 1)[0].split("#", 1)[0]
+        if p == "/admin" or p.startswith("/admin/"):
+            rel = p[len("/admin"):].lstrip("/") or "index.html"
+            full = os.path.normpath(os.path.join(ADMIN_DIR, rel))
+            if full == ADMIN_DIR or full.startswith(ADMIN_DIR + os.sep):
+                return full
+        return super().translate_path(path)
+
     def do_POST(self):
         if self.path == "/save":
             length = int(self.headers.get("Content-Length", 0))
